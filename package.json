@@ -1,0 +1,13 @@
+{
+  "name": "hungry-monkey",
+  "version": "1.0.0",
+  "description": "Restaurant discovery and recommendation application",
+  "scripts": {
+    "dev": "concurrently \"cd backend && uvicorn app.main:app --reload\" \"cd frontend && npm run dev\"",
+    "dev:backend": "cd backend && uvicorn app.main:app --reload",
+    "dev:frontend": "cd frontend && npm run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
