@@ -51,12 +51,14 @@ class RestaurantDB:
         except Exception as e:
             raise Exception(f"Failed to search restaurants: {str(e)}")
 
-    async def update_restaurant(self, business_id: str, data: Dict[str, Any]) -> Optional[Restaurant]:
+    async def update_restaurant(self, business_id: str, data: Dict[str, Any]) -> None:
         """Update a restaurant's information."""
         try:
+            print(f"🔄 Updating restaurant {business_id} with new data")
             self.supabase.update_restaurant(business_id, data)
-            return Restaurant(**data)
+            print(f"✅ Successfully updated restaurant {business_id}")
         except Exception as e:
+            print(f"❌ Error updating restaurant {business_id}: {str(e)}")
             raise Exception(f"Failed to update restaurant: {str(e)}")
 
     def delete_restaurant(self, business_id: str) -> bool:
@@ -78,12 +80,54 @@ class RestaurantDB:
 
     async def search_by_phone(self, phone: str) -> List[Restaurant]:
         """Search restaurants by phone number."""
-        return await self.yelp.search_by_phone(phone)
+        try:
+            # First check cache
+            cached = self.supabase.search_by_phone(phone)
+            if cached:
+                return [Restaurant(**r) for r in cached]
+
+            # If not in cache, search Yelp
+            restaurants = await self.yelp.search_by_phone(phone)
+            
+            # Cache results
+            for restaurant in restaurants:
+                self.supabase.store_restaurant(restaurant.model_dump())
+                
+            return restaurants
+        except Exception as e:
+            raise Exception(f"Failed to search by phone: {str(e)}")
 
     def get_cached_restaurants(self, limit: Optional[int] = None) -> List[Restaurant]:
-        """Get restaurants from cache only."""
+        """Get all restaurants from cache."""
         try:
-            results = self.supabase.get_restaurants(limit)
-            return [Restaurant(**r) for r in results]
+            print("🔍 Getting cached restaurants from Supabase...")
+            cached = self.supabase.get_all_restaurants()
+            restaurants = []
+            
+            for data in cached:
+                try:
+                    # Format location data to match Restaurant model
+                    if 'location' in data:
+                        data['location'] = {
+                            'address1': data['location'].get('address1'),
+                            'address2': None,
+                            'address3': None,
+                            'city': data['location'].get('city'),
+                            'state': data['location'].get('state'),
+                            'zip_code': data['location'].get('zip_code'),
+                            'country': 'US',
+                            'display_address': None
+                        }
+                    print(f"📝 Example formatted: {data}")
+                    restaurant = Restaurant(**data)
+                    restaurants.append(restaurant)
+                except Exception as e:
+                    print(f"⚠️ Error formatting restaurant {data.get('business_id')}: {str(e)}")
+                    continue
+            
+            if limit:
+                restaurants = restaurants[:limit]
+                
+            return restaurants
         except Exception as e:
             raise Exception(f"Failed to get cached restaurants: {str(e)}")
