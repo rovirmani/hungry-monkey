@@ -1,24 +1,43 @@
+#!/usr/bin/env python3
+import os
+import sys
 import asyncio
+from pathlib import Path
+
+# Add project root to Python path
+project_root = str(Path(__file__).parent.parent.parent)
+sys.path.append(project_root)
+
 from app.db.restaurants import RestaurantDB
 from app.models import SearchParams
 
 async def find_restaurants_near_yc():
-    print("🔍 Searching for restaurants near Y Combinator (SF)...")
+    print(" Initializing restaurant search...")
     db = RestaurantDB()
-    
-    # 2.5 miles = 4023 meters (Yelp API uses meters)
-    search_params = SearchParams(
-        location="320 Pioneer Way, Mountain View, CA",
+    params = SearchParams(
+        term="food",  # Add search term
+        location="1478 Thunderbird Ave, Sunnyvale, CA",
         radius=4023,  # 2.5 miles in meters
-        limit=50,     # Get more results
-        sort_by="rating"  # Sort by rating
+        limit=20,     # Get more results
+        sort_by="rating",  # Sort by rating
+        categories="restaurants,food"  # Explicitly request only restaurants and food places
     )
     
     try:
-        restaurants = await db.search_restaurants(search_params)
+        print("\n Fetching restaurants from Yelp...")
+        restaurants = await db.search_restaurants(params)
         
-        print(f"\nFound {len(restaurants)} restaurants within 2.5 miles:")
-        print("\nTop Rated Restaurants:")
+        # Verify storage in Supabase
+        print("\n Verifying Supabase storage...")
+        for restaurant in restaurants:
+            cached = await db.get_restaurant(restaurant.business_id)
+            if cached:
+                print(f" Restaurant '{restaurant.name}' stored in Supabase")
+            else:
+                print(f" Failed to store '{restaurant.name}' in Supabase")
+        
+        print(f"\n Found {len(restaurants)} restaurants within 2.5 miles:")
+        print("\n Top Rated Restaurants:")
         print("-" * 50)
         
         # Sort by rating and display details
@@ -26,22 +45,22 @@ async def find_restaurants_near_yc():
             price = restaurant.price if restaurant.price else "N/A"
             rating = restaurant.rating if restaurant.rating else "N/A"
             
-            print(f"\n🍽️  {restaurant.name}")
-            print(f"⭐ Rating: {rating}")
-            print(f"💰 Price: {price}")
-            print(f"📞 Phone: {restaurant.phone if restaurant.phone else 'N/A'}")
-            print(f"🏠 Address: {restaurant.location.address1}, {restaurant.location.city}")
+            print(f"\n  {restaurant.name}")
+            print(f" Rating: {rating}")
+            print(f" Price: {price}")
+            print(f" Phone: {restaurant.phone if restaurant.phone else 'N/A'}")
+            print(f" Address: {restaurant.location.address1}, {restaurant.location.city}")
             if restaurant.categories:
                 categories = ", ".join([cat.title for cat in restaurant.categories])
-                print(f"🏷️  Categories: {categories}")
+                print(f"  Categories: {categories}")
             
-            if restaurant.is_closed is False:  # Specifically check for False as it might be None
-                print("✅ Currently Open")
-            elif restaurant.is_closed is True:
-                print("❌ Currently Closed")
+            if restaurant.is_open:
+                print(" Currently Open")
+            else:
+                print(" Currently Closed")
             print("-" * 50)
     except Exception as e:
-        print(f"❌ Error: {str(e)}")
+        print(f" Error: {str(e)}")
 
 if __name__ == "__main__":
     asyncio.run(find_restaurants_near_yc())
