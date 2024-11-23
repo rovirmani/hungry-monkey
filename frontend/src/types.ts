@@ -25,6 +25,7 @@ export interface Restaurant {
   }>;
   is_open: boolean;
   hours?: DayHours[];
+  operating_hours?: OperatingHours;
 }
 
 export interface DayHours {
@@ -33,5 +34,16 @@ export interface DayHours {
   close: string;
 }
 
+export interface OperatingHours {
+  time_open: string | null;
+  time_closed: string | null;
+  is_hours_verified: boolean;
+  is_consenting: boolean;
+}
+
 export type PriceFilter = '$' | '$$' | '$$$' | '$$$$' | null;
-export type TimeFilter = 'now' | 'lunch' | 'dinner' | null;
+export interface TimeFilter {
+  openTime: string | null;
+  closeTime: string | null;
+}
+export type StarFilter = 1 | 2 | 3 | 4 | 5 | null;

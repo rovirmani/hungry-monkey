@@ -2,16 +2,22 @@ import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { RestaurantCard } from './components/RestaurantCard';
 import { Filters } from './components/Filters';
-import { Restaurant, PriceFilter, TimeFilter } from './types';
+import { Restaurant, PriceFilter, TimeFilter, StarFilter } from './types';
 import { restaurantService } from './services/restaurantService';
 
 function App() {
   const [priceFilter, setPriceFilter] = useState<PriceFilter>(null);
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>(null);
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>({ openTime: null, closeTime: null });
+  const [starFilter, setStarFilter] = useState<StarFilter>(null);
   const [search, setSearch] = useState('');
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+
+  const handleImageError = (restaurantId: string) => {
+    setImageErrors(prev => new Set([...prev, restaurantId]));
+  };
 
   useEffect(() => {
     const fetchCachedRestaurants = async () => {
@@ -53,7 +59,7 @@ function App() {
         term: search.trim(),
         location: '1478 Thunderbird Ave, Sunnyvale, CA',
         price: priceFilter && priceFilter.length > 0 ? priceFilter[0] : undefined,
-        open_now: timeFilter === 'now'
+        open_now: timeFilter.openTime || timeFilter.closeTime ? false : undefined
       });
       setRestaurants(data);
     } catch (err) {
@@ -64,50 +70,52 @@ function App() {
     }
   };
 
-  const filteredRestaurants = restaurants.filter(restaurant => {
-    const matchesPrice = !priceFilter || restaurant.price === priceFilter;
-    const matchesSearch = !search || 
-                         restaurant.name.toLowerCase().includes(search.toLowerCase()) ||
-                         restaurant.categories.some(category => 
-                           category.title.toLowerCase().includes(search.toLowerCase())
-                         );
-    
-    let matchesTime = true;
-    if (timeFilter) {
-      const today = new Date().getDay();
-      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      const todayHours = restaurant.hours?.find(h => h.day === dayNames[today]);
-      
-      if (todayHours) {
-        const now = new Date();
-        const currentHour = now.getHours();
-        const [openHour] = todayHours.open.split(':').map(Number);
-        const [closeHour] = todayHours.close.split(':').map(Number);
+  const filteredRestaurants = restaurants.filter((restaurant) => {
+    if (priceFilter && restaurant.price !== priceFilter) {
+      return false;
+    }
 
-        switch (timeFilter) {
-          case 'now':
-            matchesTime = currentHour >= openHour && currentHour < closeHour;
-            break;
-          case 'lunch':
-            matchesTime = openHour <= 11 && closeHour >= 15;
-            break;
-          case 'dinner':
-            matchesTime = openHour <= 17 && closeHour >= 22;
-            break;
-        }
-      } else {
-        matchesTime = false;
+    if (starFilter && restaurant.rating < starFilter) {
+      return false;
+    }
+
+    if (timeFilter.openTime || timeFilter.closeTime) {
+      const hours = restaurant.operating_hours;
+      if (!hours || !hours.is_hours_verified) {
+        return false;
+      }
+
+      if (timeFilter.openTime && (!hours.time_open || hours.time_open < timeFilter.openTime)) {
+        return false;
+      }
+
+      if (timeFilter.closeTime && (!hours.time_closed || hours.time_closed > timeFilter.closeTime)) {
+        return false;
       }
     }
 
-    return matchesPrice && matchesSearch && matchesTime;
+    return true;
+  }).sort((a, b) => {
+    // Sort restaurants with valid images to the top
+    const aHasValidImage = a.photos && a.photos.length > 0 && !imageErrors.has(a.business_id);
+    const bHasValidImage = b.photos && b.photos.length > 0 && !imageErrors.has(b.business_id);
+    if (aHasValidImage && !bHasValidImage) return -1;
+    if (!aHasValidImage && bHasValidImage) return 1;
+    return 0;
   });
 
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold text-gray-900">Restaurant Finder</h1>
+          <div className="flex items-baseline gap-6">
+            <h1 className="text-3xl font-bold">
+              <span className="bg-gradient-to-r from-red-500 to-pink-500 text-transparent bg-clip-text">
+                Hungry Monkey
+              </span>
+            </h1>
+            <h2 className="text-xl text-gray-600">Holiday Restaurant Finder</h2>
+          </div>
           <div className="mt-4 flex gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -136,6 +144,8 @@ function App() {
         setPriceFilter={setPriceFilter}
         timeFilter={timeFilter}
         setTimeFilter={setTimeFilter}
+        starFilter={starFilter}
+        setStarFilter={setStarFilter}
       />
 
       <main className="max-w-6xl mx-auto px-4 py-8">
@@ -155,7 +165,11 @@ function App() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredRestaurants.map((restaurant) => (
-              <RestaurantCard key={restaurant.business_id} restaurant={restaurant} />
+              <RestaurantCard 
+                key={restaurant.business_id} 
+                restaurant={restaurant}
+                onImageError={() => handleImageError(restaurant.business_id)}
+              />
             ))}
           </div>
         )}

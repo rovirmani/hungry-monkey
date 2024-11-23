@@ -108,7 +108,7 @@ class VAPIClient:
                     headers=self.headers
                 )
                 print(f"Response status: {response.status_code}")
-                print(f"Response content: {response.text}") 
+                # print(f"Response content: {response.text}") 
                 if response.status_code != 200:
                     raise Exception(f"Failed to get call status: {response.text}")
                 data = response.json()

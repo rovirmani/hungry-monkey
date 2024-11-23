@@ -2,6 +2,10 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from ..clients.vapi import VAPIClient
+from ..db.operating_hours import OperatingHoursDB
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 vapi_client = VAPIClient()
@@ -33,25 +37,13 @@ async def get_call_analysis(call_id: str):
             detail=str(e)
         )
 
-@router.get("/check-hours/{phone_number}")
-async def check_hours(phone_number: str):
-    """Call a restaurant to check their hours. Get that calls id. Use the id to get structured data."""
+@router.get("/check-hours/{restaurant_id}")
+async def check_hours(restaurant_id: str):
     try:
-        # Make the call and get call ID
-        call_id = await vapi_client.make_call(phone_number)
-        
-        # Wait for call to complete (default 2 minute timeout)
-        await vapi_client.wait_for_call_completion(call_id)
-        
-        # Get the analysis once call is completed
-        analysis = await vapi_client.get_call_analysis(call_id)
-        structured_data = analysis.get("structuredData", {})
-
-        # populate the operatingHours table in supabase
-
-        return {"success": analysis.get("successEvaluation", False), "data": structured_data}
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        hours_db = OperatingHoursDB()
+        # For now just mark as unverified since we haven't implemented actual hours checking yet
+        hours_db.mark_hours_unverified(restaurant_id)
+        return {"status": "success", "message": "Hours check initiated"}
     except Exception as e:
+        logger.error(f"Error checking hours for restaurant {restaurant_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
