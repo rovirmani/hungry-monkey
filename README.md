@@ -6,7 +6,7 @@
 - Time Remaining: 24:00:00
 
 ## Team
-- [ ] Frontend & Integration Lead (You)
+- [ ] Frontend & Integration Lead (Rohan)
 - [ ] Backend & Infrastructure Lead (Greg)
 
 ## Foundation (Hours 0-2)
