@@ -9,9 +9,10 @@ export function RestaurantCard({ restaurant }: Props) {
   const today = new Date().getDay();
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const todayHours = restaurant.hours.find(h => h.day === dayNames[today]);
+  const googleMapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.address)}`;
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:scale-[1.02]">
+    <div className="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:scale-[1.02] hover:shadow-lg">
       <img 
         src={restaurant.image} 
         alt={restaurant.name}
@@ -32,7 +33,14 @@ export function RestaurantCard({ restaurant }: Props) {
           <span className="text-sm text-gray-600">{restaurant.cuisine}</span>
         </div>
 
-        <p className="text-sm text-gray-500 mb-2">{restaurant.address}</p>
+        <a 
+          href={googleMapsLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm text-gray-500 hover:text-blue-600 mb-2 block"
+        >
+          {restaurant.address}
+        </a>
         
         <div className="text-sm">
           <span className="font-medium">Today:</span>
