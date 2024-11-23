@@ -29,6 +29,7 @@ class Restaurant(BaseModel):
     coordinates: Coordinates
     photos: List[str] = []
     categories: List[Category] = []
+    is_closed: Optional[bool] = None
     is_open: bool = True
 
     class Config:
