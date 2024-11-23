@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from .routers import restaurants
+from .routers import restaurants, vapi
 
 # Load environment variables
 load_dotenv()
@@ -19,6 +19,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(restaurants.router, prefix="/api/restaurants", tags=["restaurants"])
+app.include_router(vapi.router, prefix="/api/vapi", tags=["vapi"])
 
 @app.get("/api/health")
 async def health_check():
