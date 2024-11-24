@@ -31,6 +31,8 @@ class Restaurant(BaseModel):
     categories: List[Category] = []
     is_closed: Optional[bool] = None
     is_open: bool = True
+    time_open: Optional[str] = None
+    time_close: Optional[str] = None
 
     class Config:
         populate_by_name = True

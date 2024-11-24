@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query, Response
 from typing import List, Optional
 from ..db.restaurants import RestaurantDB
+from ..db.operating_hours import OperatingHoursDB
 from ..models import Restaurant, SearchParams
 from ..clients.google_search import image_search
 import httpx
@@ -8,6 +9,8 @@ import asyncio
 
 router = APIRouter()
 db = RestaurantDB()
+oh_db = OperatingHoursDB()
+
 
 @router.get("/cached", response_model=List[Restaurant])
 async def get_cached_restaurants(
@@ -20,7 +23,20 @@ async def get_cached_restaurants(
     try:
         print("🔍 Getting cached restaurants...")
         restaurants = db.get_cached_restaurants(limit)
-        
+
+       # get hours
+        for restaurant in restaurants:
+            try:
+                hours = oh_db.get_hours(restaurant.business_id)
+                if hours:
+                    print(f"Got hours for {restaurant.name}")
+                    print(hours)
+                    restaurant.time_open = hours.get('time_open')
+                    restaurant.time_close = hours.get('time_closed')
+                    print(f"✅ Retrieved hours for {restaurant.name}")
+            except Exception as e:
+                print(f"❌ Error getting hours for {restaurant.name}: {str(e)}")
+
         if fetch_images:
             # Fetch images asynchronously for restaurants without photos
             async def fetch_image_for_restaurant(restaurant: Restaurant):
