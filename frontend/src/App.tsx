@@ -80,16 +80,16 @@ function App() {
     }
 
     if (timeFilter.openTime || timeFilter.closeTime) {
-      const hours = restaurant.operating_hours;
-      if (!hours || !hours.is_hours_verified) {
+      // Skip restaurants with no time information
+      if (!restaurant.time_open && !restaurant.time_close) {
         return false;
       }
 
-      if (timeFilter.openTime && (!hours.time_open || hours.time_open < timeFilter.openTime)) {
+      if (timeFilter.openTime && (!restaurant.time_open || restaurant.time_open < timeFilter.openTime)) {
         return false;
       }
 
-      if (timeFilter.closeTime && (!hours.time_closed || hours.time_closed > timeFilter.closeTime)) {
+      if (timeFilter.closeTime && (!restaurant.time_close || restaurant.time_close > timeFilter.closeTime)) {
         return false;
       }
     }
