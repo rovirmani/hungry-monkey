@@ -53,7 +53,15 @@ function transformRestaurant(backendRestaurant: any): Restaurant {
     },
     photos: backendRestaurant.photos || [],
     categories: backendRestaurant.categories || [],
-    is_open: backendRestaurant.is_open ?? true
+    is_open: backendRestaurant.is_open ?? true,
+    operating_hours: {
+      time_open: backendRestaurant.operating_hours?.time_open || null,
+      time_closed: backendRestaurant.operating_hours?.time_closed || null,
+      is_hours_verified: backendRestaurant.operating_hours?.is_hours_verified || false,
+      is_consenting: backendRestaurant.operating_hours?.is_consenting || false,
+      is_open: backendRestaurant.operating_hours?.is_open || false
+    },
+    is_closed: !backendRestaurant.operating_hours?.is_open
   };
   
   console.log('✅ Transformed restaurant:', transformed);

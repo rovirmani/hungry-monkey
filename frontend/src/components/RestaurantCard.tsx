@@ -26,6 +26,7 @@ export function RestaurantCard({ restaurant, onImageError }: Props) {
 
   const getHoursDisplay = () => {
     if (!restaurant.operating_hours) {
+      console.log('No operating hours found for', restaurant.name);
       return <span className="text-gray-500 text-sm">Searching for hours...</span>;
     }
 

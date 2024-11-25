@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List
 from app.clients.supabase import SupabaseClient
 
 class OperatingHoursDB:
@@ -25,7 +25,7 @@ class OperatingHoursDB:
             # print(f"❌ Failed to get operating hours: {str(e)}")
             return None
 
-    def update_hours(self, restaurant_id: str, time_open: str, time_closed: str) -> bool:
+    def update_hours(self, restaurant_id: str, time_open: str, time_closed: str, is_open: bool) -> bool:
         """Update or create operating hours for a restaurant."""
         try:
             print(f"🔄 Updating operating hours for restaurant: {restaurant_id}")
@@ -33,6 +33,7 @@ class OperatingHoursDB:
                 'restaurant_id': restaurant_id,
                 'time_open': time_open,
                 'time_closed': time_closed,
+                "is_open": is_open,
                 'is_hours_verified': True,  # Set to True since we're getting actual hours
                 'is_consenting': True  # Assuming consent when hours are provided
             }
@@ -116,3 +117,26 @@ class OperatingHoursDB:
         except Exception as e:
             print(f"❌ Failed to update consent status: {str(e)}")
             return False
+
+    def get_hours_bulk(self, restaurant_ids: List[str]) -> Dict[str, Dict[str, Any]]:
+        """Get operating hours for multiple restaurants in a single query."""
+        try:
+            if not restaurant_ids:
+                return {}
+
+            print(f"🔍 Getting operating hours for {len(restaurant_ids)} restaurants")
+            response = self.supabase.client.table(self.TABLE_NAME)\
+                .select("*")\
+                .in_('restaurant_id', restaurant_ids)\
+                .execute()
+            
+            # Create a dictionary mapping restaurant_id to hours
+            hours_map = {}
+            for hours in response.data:
+                hours_map[hours['restaurant_id']] = hours
+            
+            print(f"✅ Found operating hours for {len(hours_map)} restaurants")
+            return hours_map
+        except Exception as e:
+            print(f"❌ Failed to get operating hours in bulk: {str(e)}")
+            return {}

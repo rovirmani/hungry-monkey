@@ -44,8 +44,11 @@ class RestaurantDB:
             
             # Cache them in Supabase
             for restaurant in restaurants:
+                print(f"📝 Storing {restaurant.name} in Supabase...")
                 data = restaurant.model_dump()
+                print(f"📝 Stored data: {data}")
                 self.supabase.store_restaurant(data)
+                print(f"✅ {restaurant.name} stored successfully")
                 
             return restaurants
         except Exception as e:
@@ -118,7 +121,6 @@ class RestaurantDB:
                             'country': 'US',
                             'display_address': None
                         }
-                    print(f"📝 Example formatted: {data}")
                     restaurant = Restaurant(**data)
                     restaurants.append(restaurant)
                 except Exception as e:
