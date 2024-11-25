@@ -3,7 +3,7 @@ from typing import List, Optional
 from ..db.restaurants import RestaurantDB
 from ..db.operating_hours import OperatingHoursDB
 from ..models import Restaurant, SearchParams, RestaurantWithHours, OperatingHours
-from ..clients.google_search import image_search
+from ..clients.google_custom_search import image_search
 import httpx
 import asyncio
 from urllib.parse import quote
