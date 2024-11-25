@@ -46,6 +46,8 @@ class GoogleImageSearch:
                 if image_urls:
                     print(f"✅ Found image for query: {query}")
                     return image_urls
+                else:
+                    print(f"⚠️ No images found for query: {query}")
                 return []
 
         except Exception as e:
