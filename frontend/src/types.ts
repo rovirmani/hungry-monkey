@@ -39,6 +39,7 @@ export interface OperatingHours {
   time_closed: string | null;
   is_hours_verified: boolean;
   is_consenting: boolean;
+  is_open: boolean;
 }
 
 export type PriceFilter = '$' | '$$' | '$$$' | '$$$$' | null;

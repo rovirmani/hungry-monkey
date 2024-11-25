@@ -19,6 +19,13 @@ class Category(BaseModel):
     alias: str
     title: str
 
+class OperatingHours(BaseModel):
+    time_open: Optional[str] = None
+    time_closed: Optional[str] = None
+    is_hours_verified: bool = False
+    is_consenting: bool = False
+    is_open: Optional[bool] = None
+
 class Restaurant(BaseModel):
     business_id: str = Field(..., alias="id")
     name: str
@@ -31,11 +38,12 @@ class Restaurant(BaseModel):
     categories: List[Category] = []
     is_closed: Optional[bool] = None
     is_open: bool = True
-    time_open: Optional[str] = None
-    time_close: Optional[str] = None
 
     class Config:
         populate_by_name = True
+
+class RestaurantWithHours(Restaurant):
+    operating_hours: Optional[OperatingHours] = None
 
 class SearchParams(BaseModel):
     term: Optional[str] = None

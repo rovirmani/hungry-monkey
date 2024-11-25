@@ -14,12 +14,15 @@ class GoogleImageSearch:
         """
         Search for images using Google Images and return the first result.
         """
+        print(f"🔍 Searching for images for query: {query}")
         try:
             # Construct the Google Images search URL
             search_url = f"https://www.google.com/search?q={query}&tbm=isch"
-            
+            print(f"search_url: {search_url}")  
             async with httpx.AsyncClient(headers=self.headers, follow_redirects=True) as client:
                 response = await client.get(search_url)
+                print(f"response.status_code: {response.status_code}"                 )
+                # print(f"response.text: {response.text}")
                 if response.status_code != 200:
                     print(f"❌ Failed to fetch images: {response.status_code}")
                     return []
@@ -32,10 +35,13 @@ class GoogleImageSearch:
                 image_urls = []
                 for img in img_tags[1:]:  # Skip first image
                     src = img.get('src')
+                    print(f"src: {src}")
                     if src and src.startswith('http'):
                         image_urls.append(src)
                         if len(image_urls) >= num:
                             break
+
+                print(f"image_urls: {image_urls}")
 
                 if image_urls:
                     print(f"✅ Found image for query: {query}")

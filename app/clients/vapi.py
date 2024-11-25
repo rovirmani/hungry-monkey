@@ -37,7 +37,7 @@ class VAPIClient:
         """Make a call using VAPI."""
         # Format the phone number
         formatted_number = self._format_phone_number(phone_number)
-        
+        print(f"Formatted phone number: {formatted_number}") 
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(

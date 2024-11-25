@@ -57,7 +57,7 @@ function App() {
       setError(null);
       const data = await restaurantService.searchRestaurants({
         term: search.trim(),
-        location: '1478 Thunderbird Ave, Sunnyvale, CA',
+        location: search.trim(),
         price: priceFilter && priceFilter.length > 0 ? priceFilter[0] : undefined,
         open_now: timeFilter.openTime || timeFilter.closeTime ? false : undefined
       });
@@ -81,7 +81,7 @@ function App() {
 
     if (timeFilter.openTime || timeFilter.closeTime) {
       // Skip restaurants with no time information
-      if (!restaurant.time_open && !restaurant.time_close) {
+      if (!restaurant.time_open && !restaurant.time_closed) {
         return false;
       }
 
@@ -89,7 +89,7 @@ function App() {
         return false;
       }
 
-      if (timeFilter.closeTime && (!restaurant.time_close || restaurant.time_close > timeFilter.closeTime)) {
+      if (timeFilter.closeTime && (!restaurant.time_closed || restaurant.time_closed > timeFilter.closeTime)) {
         return false;
       }
     }
