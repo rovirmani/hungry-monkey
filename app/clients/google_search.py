@@ -2,54 +2,85 @@ import os
 from typing import List
 import httpx
 from bs4 import BeautifulSoup
-from pathlib import Path
+from urllib.parse import quote, urlencode
+import json
+import re
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import time
 
 class GoogleImageSearch:
     def __init__(self):
-        self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
-        }
+        # Set up Chrome options
+        self.chrome_options = Options()
+        self.chrome_options.add_argument('--headless')  # Run in headless mode
+        self.chrome_options.add_argument('--no-sandbox')
+        self.chrome_options.add_argument('--disable-dev-shm-usage')
+        self.chrome_options.add_argument('--disable-gpu')
+        self.chrome_options.add_argument('--window-size=1920,1080')
+        
+        # Add realistic user agent
+        self.chrome_options.add_argument('user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36')
 
-    async def search_images(self, query: str, num: int = 1) -> List[str]:
-        """
-        Search for images using Google Images and return the first result.
-        """
-        print(f"🔍 Searching for images for query: {query}")
+    async def search_images(self, query: str, num: int = 3) -> List[str]:
+        """Search for images using Google Images with Selenium."""
+        print(f"\n🔍 Searching for images for query: {query}")
+        
         try:
-            # Construct the Google Images search URL
-            search_url = f"https://www.google.com/search?q={query}&tbm=isch"
-            print(f"search_url: {search_url}")  
-            async with httpx.AsyncClient(headers=self.headers, follow_redirects=True) as client:
-                response = await client.get(search_url)
-                print(f"response.status_code: {response.status_code}"                 )
-                # print(f"response.text: {response.text}")
-                if response.status_code != 200:
-                    print(f"❌ Failed to fetch images: {response.status_code}")
-                    return []
+            # Create a new Chrome driver instance
+            driver = webdriver.Chrome(options=self.chrome_options)
+            
+            try:
+                # Construct search URL
+                search_query = f"{query} restaurant exterior"
+                search_url = f"https://www.google.com/search?q={quote(search_query)}&tbm=isch"
+                print(f"📡 Using search URL: {search_url}")
 
-                # Parse the HTML and find image URLs
-                soup = BeautifulSoup(response.text, 'html.parser')
-                img_tags = soup.find_all('img')
+                # Load the page
+                driver.get(search_url)
+                time.sleep(2)  # Wait for dynamic content to load
+
+                # Wait for image results to appear
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "img"))
+                )
+
+                # Find all image elements
+                image_elements = driver.find_elements(By.CSS_SELECTOR, "img")
                 
-                # Skip the first image as it's usually a Google Images logo
+                # Extract image URLs
                 image_urls = []
-                for img in img_tags[1:]:  # Skip first image
-                    src = img.get('src')
-                    print(f"src: {src}")
-                    if src and src.startswith('http'):
-                        image_urls.append(src)
-                        if len(image_urls) >= num:
-                            break
+                for img in image_elements:
+                    try:
+                        # Try different attributes where the actual image URL might be stored
+                        url = img.get_attribute('src') or img.get_attribute('data-src')
+                        
+                        if url and url.startswith('http') and not url.startswith('https://www.google.com'):
+                            if '.jpg' in url.lower() or '.jpeg' in url.lower() or '.png' in url.lower():
+                                if url not in image_urls:
+                                    print(f"✅ Found valid image URL: {url}")
+                                    image_urls.append(url)
+                                    if len(image_urls) >= num:
+                                        break
+                    except Exception as e:
+                        print(f"⚠️ Error extracting URL from image: {str(e)}")
+                        continue
 
-                print(f"image_urls: {image_urls}")
+                print(f"\n✨ Found {len(image_urls)} valid image URLs:")
+                for i, url in enumerate(image_urls, 1):
+                    print(f"🖼️  {i}. {url}")
 
-                if image_urls:
-                    print(f"✅ Found image for query: {query}")
-                    return image_urls
-                return []
+                return image_urls[:num]
+
+            finally:
+                # Always close the browser
+                driver.quit()
 
         except Exception as e:
-            print(f"❌ Error searching for images: {str(e)}")
+            print(f"❌ Error during image search: {str(e)}")
             return []
 
 # Create singleton instance
