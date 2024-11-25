@@ -133,3 +133,6 @@ class RestaurantDB:
             return restaurants
         except Exception as e:
             raise Exception(f"Failed to get cached restaurants: {str(e)}")
+            
+    def get_restaurants_without_hours(self) -> List[Dict[str, Any]]:
+        return self.supabase.get_restaurants_without_hours()

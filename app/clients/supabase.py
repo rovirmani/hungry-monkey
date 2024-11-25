@@ -4,8 +4,9 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 
 class SupabaseClient:
-    TABLE_NAME = 'restaurants'  # Define table name as a class constant
-    
+    RESTAURANTS_TABLE_NAME = 'restaurants'
+    OPERATING_HOURS_TABLE_NAME = 'operating_hours' 
+
     def __init__(self):
         load_dotenv()
         self.supabase_url = os.getenv("SUPABASE_URL")
@@ -21,7 +22,7 @@ class SupabaseClient:
         """Store a restaurant in Supabase."""
         try:
             print(f"💾 Storing restaurant: {restaurant_data.get('name', 'Unknown')}")
-            self.client.table(self.TABLE_NAME).upsert(restaurant_data).execute()
+            self.client.table(self.RESTAURANTS_TABLE_NAME).upsert(restaurant_data).execute()
             print("✅ Restaurant stored successfully")
             return True
         except Exception as e:
@@ -32,7 +33,7 @@ class SupabaseClient:
         """Get a restaurant by business ID."""
         try:
             print(f"🔍 Getting restaurant with ID: {business_id}")
-            response = self.client.table(self.TABLE_NAME).select("*").eq('business_id', business_id).execute()
+            response = self.client.table(self.RESTAURANTS_TABLE_NAME).select("*").eq('business_id', business_id).execute()
             if response.data:
                 print("✅ Found restaurant")
             else:
@@ -46,7 +47,7 @@ class SupabaseClient:
         """Get restaurants from Supabase."""
         try:
             print("\n🔍 Fetching restaurants from Supabase...")
-            query = self.client.table(self.TABLE_NAME).select("*")
+            query = self.client.table(self.RESTAURANTS_TABLE_NAME).select("*")
             if limit:
                 print(f"📊 Limiting to {limit} results")
                 query = query.limit(limit)
@@ -86,7 +87,7 @@ class SupabaseClient:
         """Update a restaurant's information."""
         try:
             print(f"🔄 Updating restaurant with ID: {business_id}")
-            self.client.table(self.TABLE_NAME).update(data).eq('business_id', business_id).execute()
+            self.client.table(self.RESTAURANTS_TABLE_NAME).update(data).eq('business_id', business_id).execute()
             print("✅ Restaurant updated successfully")
             return True
         except Exception as e:
@@ -97,7 +98,7 @@ class SupabaseClient:
         """Delete a restaurant."""
         try:
             print(f"🚮 Deleting restaurant with ID: {business_id}")
-            self.client.table(self.TABLE_NAME).delete().eq('business_id', business_id).execute()
+            self.client.table(self.RESTAURANTS_TABLE_NAME).delete().eq('business_id', business_id).execute()
             print("✅ Restaurant deleted successfully")
             return True
         except Exception as e:
@@ -108,9 +109,24 @@ class SupabaseClient:
         """Bulk upsert restaurants."""
         try:
             print(f"💾 Bulk upserting {len(restaurants)} restaurants")
-            self.client.table(self.TABLE_NAME).upsert(restaurants).execute()
+            self.client.table(self.RESTAURANTS_TABLE_NAME).upsert(restaurants).execute()
             print("✅ Restaurants bulk upserted successfully")
             return True
         except Exception as e:
             print(f"❌ Failed to bulk upsert restaurants: {str(e)}")
             return False
+
+    def get_restaurants_without_hours(self) -> List[Dict[str, Any]]:
+        try:
+
+            # if restuaraut's business_id doesnt exist in operating_hours table as restaurant_id 
+            # then add to queue in order of oldest creation time first
+            print("🔍 Fetching restaurants without hours from Supabase...")
+
+            query = self.client.table(self.RESTAURANTS_TABLE_NAME).select("*").eq('is_hours_verified', False).order('created_at')
+            response = query.execute()
+            print("🚀 Executing query...")
+            print(f"✅ Found {len(response.data)} restaurants without hours")
+            return response.data
+        except Exception as e:
+            print(f"❌ Error fetching restaurants without hours: {str(e)}")
