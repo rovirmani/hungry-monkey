@@ -3,7 +3,7 @@ import { createAuthenticatedClient } from './apiClient';
 import { useAuth } from '@clerk/clerk-react';
 import { useMemo } from 'react';
 
-const API_BASE_URL = 'http://localhost:8000/api';  // adjust this to match your backend URL
+const API_BASE_URL = import.meta.env.VITE_API_URL;  // Use environment variable
 
 // Convert frontend price format to backend format
 function convertPriceFilter(price: string | null): string | undefined {
@@ -75,29 +75,45 @@ export const useRestaurantService = () => {
   const { getToken } = useAuth();
   
   return useMemo(() => {
-    const apiClient = createAuthenticatedClient(API_BASE_URL, getToken);
+    const apiClient = createAuthenticatedClient(API_BASE_URL, async () => {
+      try {
+        // Get a JWT token specifically for our backend
+        const token = await getToken({
+          template: "hungry-monkey-jwt"
+        });
+        console.log('Got JWT token:', token ? 'present' : 'missing');
+        return token;
+      } catch (error) {
+        console.error('Error getting token:', error);
+        return null;
+      }
+    });
 
     return {
       async searchRestaurants(params: {
         term?: string;
         location: string;
         price?: string;
-        open_now?: boolean;
         categories?: string;
       }): Promise<Restaurant[]> {
         const searchParams = new URLSearchParams();
         if (params.term) searchParams.append('term', params.term);
         if (params.location) searchParams.append('location', params.location);
         if (params.price) searchParams.append('price', convertPriceFilter(params.price) || '');
-        if (params.open_now !== undefined) searchParams.append('open_now', params.open_now.toString());
         if (params.categories) searchParams.append('categories', params.categories);
 
-        const response = await apiClient.get<any>(`/restaurants/search?${searchParams.toString()}`);
+        const response = await apiClient.get<any>(
+          `/restaurants/search?${searchParams.toString()}`,
+          true  // require auth for restaurant endpoints
+        );
         return response.map(transformRestaurant);
       },
 
       async getRestaurantDetails(businessId: string): Promise<Restaurant> {
-        const response = await apiClient.get<any>(`/restaurants/${businessId}`);
+        const response = await apiClient.get<any>(
+          `/restaurants/${businessId}`,
+          true  // require auth for restaurant endpoints
+        );
         return transformRestaurant(response);
       },
 
@@ -108,7 +124,7 @@ export const useRestaurantService = () => {
 
         const response = await apiClient.get<any>(
           `/restaurants/cached?${params.toString()}`,
-          false // never require auth for restaurant endpoints
+          false  // no auth required for cached restaurants
         );
         return response.map(transformRestaurant);
       },

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
-import { SignIn, SignUp, UserButton } from '@clerk/clerk-react';
+import { SignIn, SignUp, UserButton, useAuth } from '@clerk/clerk-react';
 import { Search } from 'lucide-react';
 import { RestaurantCard } from './components/RestaurantCard';
 import { Filters } from './components/Filters';
@@ -10,6 +10,7 @@ import { Restaurant, PriceFilter, TimeFilter, StarFilter } from './types';
 import { useRestaurantService } from './services/restaurantService';
 
 function App() {
+  const { isSignedIn } = useAuth();
   const restaurantService = useRestaurantService();
   const [priceFilter, setPriceFilter] = useState<PriceFilter>(undefined);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>({ openTime: null, closeTime: null });
@@ -25,7 +26,7 @@ function App() {
       try {
         setLoading(true);
         setError(null);
-        const data = await restaurantService.getCachedRestaurants(undefined, false); // fetch images without auth
+        const data = await restaurantService.getCachedRestaurants(undefined, false);
         setRestaurants(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load restaurants');
@@ -43,14 +44,18 @@ function App() {
       return;
     }
 
+    if (!isSignedIn) {
+      setError('Please sign in to search for restaurants');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
       const data = await restaurantService.searchRestaurants({
         term: search.trim(),
         location: search.trim(),
-        price: priceFilter,
-        open_now: timeFilter.openTime !== null
+        price: priceFilter
       });
       setRestaurants(data);
     } catch (err) {

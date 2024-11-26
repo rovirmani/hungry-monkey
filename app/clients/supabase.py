@@ -134,3 +134,37 @@ class SupabaseClient:
             return response.data
         except Exception as e:
             print(f"❌ Error fetching restaurants without hours: {str(e)}")
+
+    async def search_restaurants(
+        self,
+        term: Optional[str] = None,
+        location: Optional[str] = None,
+        price: Optional[str] = None,
+        categories: Optional[str] = None
+    ) -> List[Dict]:
+        """Search for restaurants in Supabase."""
+        try:
+            print(f"\n🔍 Searching restaurants with term='{term}' location='{location}'")
+            
+            # Build query conditions
+            conditions = []
+            if location:
+                conditions.append(f"location.ilike.%{location}%")
+            if term:
+                conditions.append(f"name.ilike.%{term}%")
+                conditions.append(f"categories.ilike.%{term}%")
+            if price:
+                conditions.append(f"price.eq.{price}")
+            if categories:
+                conditions.append(f"categories.ilike.%{categories}%")
+                
+            # Execute query with OR conditions for term
+            query_str = ",".join(conditions)
+            response = await self.client.table(self.RESTAURANTS_TABLE_NAME).select("*").or_(query_str).execute()
+            
+            print(f"✅ Found {len(response.data)} restaurants")
+            return response.data
+            
+        except Exception as e:
+            print(f"❌ Failed to search restaurants: {str(e)}")
+            return []

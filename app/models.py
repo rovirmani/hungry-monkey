@@ -52,4 +52,6 @@ class SearchParams(BaseModel):
     limit: Optional[int] = 20
     sort_by: Optional[str] = "best_match"  # "best_match", "rating", "review_count", "distance"
     price: Optional[str] = None  # "1,2,3,4"
+    categories: Optional[str] = None
+    offset: Optional[int] = None
     open_now: Optional[bool] = None

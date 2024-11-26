@@ -37,22 +37,47 @@ class RestaurantDB:
             raise Exception(f"Failed to get restaurant: {str(e)}")
 
     async def search_restaurants(self, params: SearchParams) -> List[Restaurant]:
-        """Search restaurants from Yelp and store them."""
+        """
+        Search for restaurants using the Yelp API
+        """
         try:
-            # Get fresh results from Yelp
-            restaurants = await self.yelp.search_restaurants(params)
+            print(f"\n🔍 Searching Yelp with params: {params}")
+            restaurants = await self.yelp.search_businesses(
+                term=params.term,
+                location=params.location,
+                price=params.price,
+                categories=params.categories,
+                limit=params.limit,
+                sort_by=params.sort_by
+            )
             
-            # Store them in Supabase
+            # Store all restaurants in cache
             for restaurant in restaurants:
-                print(f"📝 Storing {restaurant.name} in Supabase...")
-                data = restaurant.model_dump()
-                print(f"📝 Stored data: {data}")
-                self.supabase.store_restaurant(data)
-                print(f"✅ {restaurant.name} stored successfully")
+                await self.create_restaurant(restaurant)
                 
             return restaurants
+            
         except Exception as e:
-            raise Exception(f"Failed to search restaurants: {str(e)}")
+            print(f"❌ Failed to search Yelp: {str(e)}")
+            return []
+
+    async def search_cached_restaurants(self, params: SearchParams) -> List[Restaurant]:
+        """
+        Search for restaurants in our database cache
+        """
+        try:
+            # Use Supabase's built-in filtering
+            restaurants = await self.supabase.search_restaurants(
+                term=params.term,
+                location=params.location,
+                price=params.price,
+                categories=params.categories
+            )
+            return [Restaurant(**r) for r in restaurants]
+            
+        except Exception as e:
+            print(f"❌ Failed to search cache: {str(e)}")
+            return []
 
     async def update_restaurant(self, business_id: str, data: Dict[str, Any]) -> None:
         """Update a restaurant's information."""

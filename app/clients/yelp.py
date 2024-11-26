@@ -2,7 +2,7 @@ import os
 from typing import List, Optional, Dict, Any
 import httpx
 from dotenv import load_dotenv
-from app.models import Restaurant, SearchParams
+from app.models import Restaurant, SearchParams, Location, Coordinates, Category
 
 class YelpClient:
     def __init__(self):
@@ -17,6 +17,85 @@ class YelpClient:
             "accept": "application/json"
         }
 
+    async def search_businesses(
+        self,
+        term: Optional[str] = None,
+        location: str = None,
+        price: Optional[str] = None,
+        categories: Optional[str] = None,
+        limit: Optional[int] = 20,
+        sort_by: Optional[str] = "best_match"
+    ) -> List[Restaurant]:
+        """
+        Search for businesses using the Yelp Fusion API
+        """
+        try:
+            # Build query parameters
+            params = {
+                "term": term or "restaurants",
+                "location": location,
+                "limit": limit,
+                "sort_by": sort_by
+            }
+            if price:
+                params["price"] = price
+            if categories:
+                params["categories"] = categories
+                
+            print(f"🔍 Searching Yelp API with params: {params}")
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}/businesses/search",
+                    params=params,
+                    headers=self.headers
+                )
+                response.raise_for_status()
+                data = response.json()
+                
+                # Convert Yelp response to Restaurant models
+                restaurants = []
+                for business in data.get("businesses", []):
+                    try:
+                        restaurant = Restaurant(
+                            id=business["id"],
+                            name=business["name"],
+                            rating=business["rating"],
+                            price=business.get("price"),
+                            phone=business.get("phone"),
+                            location=Location(
+                                address1=business["location"].get("address1"),
+                                address2=business["location"].get("address2"),
+                                address3=business["location"].get("address3"),
+                                city=business["location"]["city"],
+                                state=business["location"]["state"],
+                                zip_code=business["location"]["zip_code"],
+                                country=business["location"].get("country", "US"),
+                                display_address=business["location"].get("display_address", [])
+                            ),
+                            coordinates=Coordinates(
+                                latitude=business["coordinates"]["latitude"],
+                                longitude=business["coordinates"]["longitude"]
+                            ),
+                            photos=[business.get("image_url")] if business.get("image_url") else [],
+                            categories=[
+                                Category(alias=cat["alias"], title=cat["title"])
+                                for cat in business.get("categories", [])
+                            ],
+                            is_closed=business.get("is_closed", False)
+                        )
+                        restaurants.append(restaurant)
+                    except Exception as e:
+                        print(f"❌ Failed to parse restaurant {business.get('name')}: {str(e)}")
+                        continue
+                
+                print(f"✅ Found {len(restaurants)} restaurants from Yelp")
+                return restaurants
+                
+        except Exception as e:
+            print(f"❌ Failed to search Yelp API: {str(e)}")
+            return []
+
     async def search_restaurants(self, params: SearchParams) -> List[Restaurant]:
         """Search for restaurants using Yelp API."""
         try:
@@ -29,8 +108,8 @@ class YelpClient:
                 "radius": int(params.radius) if params.radius else None,
                 "limit": params.limit,
                 "sort_by": params.sort_by,
-                "open_now": params.open_now,
                 "price": params.price,
+                "categories": params.categories
             }
             
             # Remove None values

@@ -118,25 +118,23 @@ class OperatingHoursDB:
             print(f"❌ Failed to update consent status: {str(e)}")
             return False
 
-    def get_hours_bulk(self, restaurant_ids: List[str]) -> Dict[str, Dict[str, Any]]:
-        """Get operating hours for multiple restaurants in a single query."""
+    async def get_hours_bulk(self, business_ids: List[str]) -> Dict[str, Dict]:
+        """Get operating hours for multiple restaurants."""
         try:
-            if not restaurant_ids:
+            if not business_ids:
                 return {}
-
-            print(f"🔍 Getting operating hours for {len(restaurant_ids)} restaurants")
-            response = self.supabase.client.table(self.TABLE_NAME)\
-                .select("*")\
-                .in_('restaurant_id', restaurant_ids)\
-                .execute()
+                
+            print(f"\n🕒 Getting hours for {len(business_ids)} restaurants")
+            response = await self.supabase.client.table('operating_hours').select("*").in_('business_id', business_ids).execute()
             
-            # Create a dictionary mapping restaurant_id to hours
+            # Convert to map of business_id -> hours
             hours_map = {}
             for hours in response.data:
-                hours_map[hours['restaurant_id']] = hours
-            
-            print(f"✅ Found operating hours for {len(hours_map)} restaurants")
+                hours_map[hours['business_id']] = hours
+                
+            print(f"✅ Found hours for {len(hours_map)} restaurants")
             return hours_map
+            
         except Exception as e:
-            print(f"❌ Failed to get operating hours in bulk: {str(e)}")
+            print(f"❌ Failed to get hours: {str(e)}")
             return {}
