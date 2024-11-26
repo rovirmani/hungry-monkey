@@ -1,10 +1,11 @@
-from fastapi import FastAPI, BackgroundTasks, Depends
+from fastapi import FastAPI, BackgroundTasks, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from .routers import restaurants, vapi
 import asyncio
 import logging
 import os
+import time
+from .routers import restaurants, vapi
 from .db.restaurants import RestaurantDB
 from .clients.vapi import VAPIClient
 from app.middleware.auth import ClerkAuthMiddleware
@@ -23,12 +24,44 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="Restaurant Holiday Hours API")
 auth = ClerkAuthMiddleware()
 
+# Add request logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    
+    # Log request details
+    logger.info(f" Request: {request.method} {request.url}")
+    logger.info(f"Headers: {dict(request.headers)}")
+    
+    try:
+        # Get request body if it exists
+        body = await request.body()
+        if body:
+            logger.info(f"Body: {body.decode()}")
+    except Exception as e:
+        logger.error(f"Error reading body: {e}")
+    
+    # Process request
+    try:
+        response = await call_next(request)
+        
+        # Log response details
+        process_time = time.time() - start_time
+        logger.info(f" Response: {response.status_code} (took {process_time:.2f}s)")
+        
+        return response
+    except Exception as e:
+        logger.error(f" Error processing request: {str(e)}")
+        raise
+
 # Configure CORS
 origins = [
     "http://localhost:5173",  # React dev server
-    "http://hungry-monkey-nine.vercel.app",  # Vercel production
+    "https://hungry-monkey-nine.vercel.app",  # Vercel production
     os.getenv("FRONTEND_URL", ""),  # From environment variable
 ]
+
+logger.info(f" Configured CORS origins: {origins}")
 
 app.add_middleware(
     CORSMiddleware,
