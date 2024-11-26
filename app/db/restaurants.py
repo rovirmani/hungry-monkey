@@ -18,17 +18,17 @@ class RestaurantDB:
             raise Exception(f"Failed to create restaurant: {str(e)}")
 
     async def get_restaurant(self, business_id: str) -> Optional[Restaurant]:
-        """Get a restaurant, first from cache then Yelp."""
+        """Get a restaurant from storage, if not found fetch from Yelp."""
         try:
-            # Try cache first
-            cached = self.supabase.get_restaurant(business_id)
-            if cached:
-                return Restaurant(**cached)
+            # Try database first
+            stored = self.supabase.get_restaurant(business_id)
+            if stored:
+                return Restaurant(**stored)
 
-            # If not in cache, get from Yelp
+            # If not in database, get from Yelp
             restaurant = await self.yelp.get_business_details(business_id)
             if restaurant:
-                # Cache it
+                # Store it
                 self.supabase.store_restaurant(restaurant.model_dump())
                 return restaurant
 
@@ -37,12 +37,12 @@ class RestaurantDB:
             raise Exception(f"Failed to get restaurant: {str(e)}")
 
     async def search_restaurants(self, params: SearchParams) -> List[Restaurant]:
-        """Search restaurants from Yelp and cache them."""
+        """Search restaurants from Yelp and store them."""
         try:
             # Get fresh results from Yelp
             restaurants = await self.yelp.search_restaurants(params)
             
-            # Cache them in Supabase
+            # Store them in Supabase
             for restaurant in restaurants:
                 print(f"📝 Storing {restaurant.name} in Supabase...")
                 data = restaurant.model_dump()
@@ -84,15 +84,15 @@ class RestaurantDB:
     async def search_by_phone(self, phone: str) -> List[Restaurant]:
         """Search restaurants by phone number."""
         try:
-            # First check cache
-            cached = self.supabase.search_by_phone(phone)
-            if cached:
-                return [Restaurant(**r) for r in cached]
+            # First check database
+            stored = self.supabase.search_by_phone(phone)
+            if stored:
+                return [Restaurant(**r) for r in stored]
 
-            # If not in cache, search Yelp
+            # If not in database, search Yelp
             restaurants = await self.yelp.search_by_phone(phone)
             
-            # Cache results
+            # Store results
             for restaurant in restaurants:
                 self.supabase.store_restaurant(restaurant.model_dump())
                 
@@ -100,14 +100,14 @@ class RestaurantDB:
         except Exception as e:
             raise Exception(f"Failed to search by phone: {str(e)}")
 
-    def get_cached_restaurants(self, limit: Optional[int] = None) -> List[Restaurant]:
-        """Get all restaurants from cache."""
+    def get_stored_restaurants(self, limit: Optional[int] = None) -> List[Restaurant]:
+        """Get all restaurants from storage."""
         try:
-            print("🔍 Getting cached restaurants from Supabase...")
-            cached = self.supabase.get_all_restaurants()
+            print("🔍 Getting stored restaurants from Supabase...")
+            stored = self.supabase.get_all_restaurants()
             restaurants = []
             
-            for data in cached:
+            for data in stored:
                 try:
                     # Format location data to match Restaurant model
                     if 'location' in data:
@@ -132,7 +132,7 @@ class RestaurantDB:
                 
             return restaurants
         except Exception as e:
-            raise Exception(f"Failed to get cached restaurants: {str(e)}")
+            raise Exception(f"Failed to get stored restaurants: {str(e)}")
             
     def get_restaurants_without_hours(self) -> List[Dict[str, Any]]:
         return self.supabase.get_restaurants_without_hours()
