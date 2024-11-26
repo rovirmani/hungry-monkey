@@ -1,13 +1,16 @@
 import { Star } from 'lucide-react';
 import { Restaurant } from '../types';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { useRestaurantService } from '../services/restaurantService';
 
 interface Props {
   restaurant: Restaurant;
 }
 
 export function RestaurantCard({ restaurant }: Props) {
+  const restaurantService = useRestaurantService();
   const [imageLoadError, setImageLoadError] = useState(false);
+  const [isCheckingHours, setIsCheckingHours] = useState(false);
   
   const googleMapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
     restaurant.location.display_address.join(', ')
@@ -22,14 +25,45 @@ export function RestaurantCard({ restaurant }: Props) {
     setImageLoadError(true);
   };
 
+  const checkHours = useCallback(async () => {
+    if (isCheckingHours || restaurant.operating_hours?.is_hours_verified) {
+      return;
+    }
+
+    try {
+      setIsCheckingHours(true);
+      await restaurantService.checkHours(restaurant.business_id);
+      // Note: The actual hours update will come through your regular data refresh
+    } catch (error) {
+      console.error('Failed to check hours:', error);
+    } finally {
+      setIsCheckingHours(false);
+    }
+  }, [restaurant.business_id, restaurant.operating_hours?.is_hours_verified, isCheckingHours, restaurantService]);
+
   const getHoursDisplay = () => {
     if (!restaurant.operating_hours) {
-      console.log('No operating hours found for', restaurant.name);
-      return <span className="text-gray-500 text-sm">Searching for hours...</span>;
+      return (
+        <button 
+          onClick={checkHours}
+          disabled={isCheckingHours}
+          className="text-blue-500 hover:text-blue-700 text-sm font-medium"
+        >
+          {isCheckingHours ? 'Checking hours...' : 'Check hours'}
+        </button>
+      );
     }
 
     if (!restaurant.operating_hours.is_hours_verified) {
-      return <span className="text-gray-500 text-sm">Verifying hours...</span>;
+      return (
+        <button 
+          onClick={checkHours}
+          disabled={isCheckingHours}
+          className="text-blue-500 hover:text-blue-700 text-sm font-medium"
+        >
+          {isCheckingHours ? 'Verifying hours...' : 'Verify hours'}
+        </button>
+      );
     }
 
     if (restaurant.operating_hours.time_open && restaurant.operating_hours.time_closed) {
@@ -82,8 +116,8 @@ export function RestaurantCard({ restaurant }: Props) {
             )}
           </div>
           <div className="flex items-center gap-0">
-                  {getHoursDisplay()}
-                </div>
+            {getHoursDisplay()}
+          </div>
           <div className="flex items-center gap-2">
             <a 
               href={googleMapsLink}

@@ -7,9 +7,10 @@ import { Filters } from './components/Filters';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Profile } from './pages/Profile';
 import { Restaurant, PriceFilter, TimeFilter, StarFilter } from './types';
-import { restaurantService } from './services/restaurantService';
+import { useRestaurantService } from './services/restaurantService';
 
 function App() {
+  const restaurantService = useRestaurantService();
   const [priceFilter, setPriceFilter] = useState<PriceFilter>(null);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>({ openTime: null, closeTime: null });
   const [starFilter, setStarFilter] = useState<StarFilter>(null);
@@ -24,7 +25,7 @@ function App() {
       try {
         setLoading(true);
         setError(null);
-        const data = await restaurantService.getCachedRestaurants();
+        const data = await restaurantService.getCachedRestaurants(undefined, false); // fetch images without auth
         setRestaurants(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load restaurants');
@@ -34,7 +35,7 @@ function App() {
     };
 
     loadCachedRestaurants();
-  }, []);
+  }, [restaurantService]);
 
   const handleSearch = async () => {
     if (!search.trim()) {
@@ -47,7 +48,9 @@ function App() {
       setError(null);
       const data = await restaurantService.searchRestaurants({
         term: search.trim(),
-        location: search.trim()
+        location: search.trim(),
+        price: priceFilter,
+        open_now: timeFilter.openTime !== null
       });
       setRestaurants(data);
     } catch (err) {

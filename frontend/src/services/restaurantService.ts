@@ -1,6 +1,9 @@
 import { Restaurant } from '../types';
+import { createAuthenticatedClient } from './apiClient';
+import { useAuth } from '@clerk/clerk-react';
+import { useMemo } from 'react';
 
-const API_BASE_URL = 'http://localhost:8000/api/restaurants';  // adjust this to match your backend URL
+const API_BASE_URL = 'http://localhost:8000/api';  // adjust this to match your backend URL
 
 // Convert frontend price format to backend format
 function convertPriceFilter(price: string | null): string | undefined {
@@ -10,7 +13,7 @@ function convertPriceFilter(price: string | null): string | undefined {
 
 // Helper function to transform backend restaurant data to frontend format
 function transformRestaurant(backendRestaurant: any): Restaurant {
-  console.log('🔄 Transforming restaurant:', backendRestaurant);
+  console.log(' Transforming restaurant:', backendRestaurant);
   
   // Handle location data comprehensively
   const location = backendRestaurant.location || {};
@@ -64,85 +67,63 @@ function transformRestaurant(backendRestaurant: any): Restaurant {
     is_closed: !backendRestaurant.operating_hours?.is_open
   };
   
-  console.log('✅ Transformed restaurant:', transformed);
+  console.log(' Transformed restaurant:', transformed);
   return transformed;
 }
 
-export const restaurantService = {
-  async searchRestaurants(params: {
-    term?: string;
-    location: string;
-    price?: string;
-    open_now?: boolean;
-    categories?: string;
-  }): Promise<Restaurant[]> {
-    const queryParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) {
-        if (key === 'price' && typeof value === 'string') {
-          const backendPrice = convertPriceFilter(value);
-          if (backendPrice) {
-            queryParams.append(key, backendPrice);
-          }
-        } else if (key === 'open_now' && typeof value === 'boolean') {
-          queryParams.append(key, value.toString());
-        } else if (typeof value === 'string') {
-          queryParams.append(key, value);
-        }
-      }
-    });
+export const useRestaurantService = () => {
+  const { getToken } = useAuth();
+  
+  return useMemo(() => {
+    const apiClient = createAuthenticatedClient(API_BASE_URL, getToken);
 
-    try {
-      console.log('🔍 Searching restaurants with params:', params);
-      const response = await fetch(`${API_BASE_URL}/search?${queryParams}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch restaurants');
-      }
-      const data = await response.json();
-      console.log('📦 Got restaurant data:', data);
-      return data.map(transformRestaurant);
-    } catch (error) {
-      console.error('❌ Error fetching restaurants:', error);
-      throw error;
-    }
-  },
+    return {
+      async searchRestaurants(params: {
+        term?: string;
+        location: string;
+        price?: string;
+        open_now?: boolean;
+        categories?: string;
+      }): Promise<Restaurant[]> {
+        const searchParams = new URLSearchParams();
+        if (params.term) searchParams.append('term', params.term);
+        if (params.location) searchParams.append('location', params.location);
+        if (params.price) searchParams.append('price', convertPriceFilter(params.price) || '');
+        if (params.open_now !== undefined) searchParams.append('open_now', params.open_now.toString());
+        if (params.categories) searchParams.append('categories', params.categories);
 
-  async getRestaurantDetails(businessId: string): Promise<Restaurant> {
-    try {
-      console.log('🔍 Getting restaurant details for ID:', businessId);
-      const response = await fetch(`${API_BASE_URL}/${businessId}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      console.log('📦 Got restaurant details:', data);
-      return transformRestaurant(data);
-    } catch (error) {
-      console.error('❌ Error fetching restaurant details:', error);
-      throw new Error('Failed to fetch restaurant details');
-    }
-  },
+        const response = await apiClient.get<any>(`/restaurants/search?${searchParams.toString()}`);
+        return response.map(transformRestaurant);
+      },
 
-  async getCachedRestaurants(limit?: number): Promise<Restaurant[]> {
-    try {
-      console.log('🔍 Getting cached restaurants...');
-      const queryParams = new URLSearchParams();
-      if (limit) {
-        queryParams.append('limit', limit.toString());
+      async getRestaurantDetails(businessId: string): Promise<Restaurant> {
+        const response = await apiClient.get<any>(`/restaurants/${businessId}`);
+        return transformRestaurant(response);
+      },
+
+      async getCachedRestaurants(limit?: number, fetchImages: boolean = false): Promise<Restaurant[]> {
+        const params = new URLSearchParams();
+        if (limit) params.append('limit', limit.toString());
+        if (fetchImages) params.append('fetch_images', 'true');
+
+        const response = await apiClient.get<any>(
+          `/restaurants/cached?${params.toString()}`,
+          false // never require auth for restaurant endpoints
+        );
+        return response.map(transformRestaurant);
+      },
+
+      async makeCall(phoneNumber: string, message?: string): Promise<any> {
+        return apiClient.post('/vapi/call/' + phoneNumber, { message }, true); // require auth
+      },
+
+      async getCallAnalysis(callId: string): Promise<any> {
+        return apiClient.get('/vapi/call-analysis/' + callId, true); // require auth
+      },
+
+      async checkHours(restaurantId: string): Promise<any> {
+        return apiClient.get('/vapi/check-hours/' + restaurantId, true); // require auth
       }
-      // Always fetch images for restaurants that don't have them
-      queryParams.append('fetch_images', 'true');
-      
-      const response = await fetch(`${API_BASE_URL}/cached?${queryParams}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch cached restaurants');
-      }
-      const data = await response.json();
-      console.log('📦 Got cached restaurant data:', data);
-      return data.map(transformRestaurant);
-    } catch (error) {
-      console.error('❌ Error fetching cached restaurants:', error);
-      throw error;
-    }
-  }
+    };
+  }, [getToken]);
 };
