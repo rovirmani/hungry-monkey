@@ -26,17 +26,18 @@ function App() {
       try {
         setLoading(true);
         setError(null);
-        const data = await restaurantService.getCachedRestaurants(undefined, false);
+        const data = await restaurantService.getCachedRestaurants();
         setRestaurants(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load restaurants');
+        console.error('Error loading restaurants:', err);
       } finally {
         setLoading(false);
       }
     };
 
     loadCachedRestaurants();
-  }, [restaurantService]);
+  }, []);
 
   const handleSearch = async () => {
     if (!search.trim()) {

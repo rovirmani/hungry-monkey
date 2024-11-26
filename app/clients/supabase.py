@@ -49,23 +49,12 @@ class SupabaseClient:
             print("\n🔍 Fetching restaurants from Supabase...")
             query = self.client.table(self.RESTAURANTS_TABLE_NAME).select("*")
             if limit:
-                print(f"📊 Limiting to {limit} results")
                 query = query.limit(limit)
-            print("🚀 Executing query...")    
-            response = query.execute()
-            
-            if not response.data:
-                print("⚠️ No restaurants found in Supabase")
-                return []
-                
+            response = query.execute()  
             print(f"✅ Found {len(response.data)} restaurants")
-            # Print first restaurant as example
-            if response.data:
-                print(f"📝 Example restaurant: {response.data[0]}")
             return response.data
         except Exception as e:
-            print(f"❌ Error getting restaurants: {str(e)}")
-            print(f"❌ Error type: {type(e)}")
+            print(f"❌ Failed to get restaurants: {str(e)}")
             return []
             
     def get_all_restaurants(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
@@ -135,7 +124,37 @@ class SupabaseClient:
         except Exception as e:
             print(f"❌ Error fetching restaurants without hours: {str(e)}")
 
-    async def search_restaurants(
+    def search_restaurants(self, term: Optional[str] = None, location: Optional[str] = None, 
+                         price: Optional[str] = None, categories: Optional[List[str]] = None) -> List[Dict]:
+        """Search restaurants in Supabase."""
+        try:
+            print(f"\n🔍 Searching restaurants with term: {term}, location: {location}")
+            query = self.client.table(self.RESTAURANTS_TABLE_NAME).select("*")
+            
+            # Build filters
+            if term:
+                query = query.ilike("name", f"%{term}%")
+            
+            if location:
+                # Search in city field
+                query = query.filter("location->>city", "ilike", f"%{location}%")
+                
+            if price:
+                query = query.eq("price", price)
+                
+            if categories and len(categories) > 0:
+                query = query.contains("categories", categories)
+            
+            print("🚀 Executing query...")
+            response = query.execute()
+            print(f"✅ Found {len(response.data)} restaurants")
+            return response.data
+            
+        except Exception as e:
+            print(f"❌ Failed to search restaurants: {str(e)}")
+            return []
+            
+    async def search_restaurants_async(
         self,
         term: Optional[str] = None,
         location: Optional[str] = None,

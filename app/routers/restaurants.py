@@ -4,7 +4,7 @@ from ..db.restaurants import RestaurantDB
 from ..db.operating_hours import OperatingHoursDB
 from ..models import Restaurant, SearchParams, RestaurantWithHours, OperatingHours
 from ..clients.google_custom_search import image_search
-from ..auth.clerk import verify_auth_token, verify_auth_token_optional
+from ..auth.clerk import require_auth, optional_auth, get_optional_user
 import httpx
 import asyncio
 from urllib.parse import quote
@@ -19,134 +19,103 @@ async def get_cached_restaurants(
     limit: Optional[int] = Query(None, description="Maximum number of restaurants to return"),
     fetch_images: Optional[bool] = Query(False, description="Whether to fetch missing images"),
 ) -> List[RestaurantWithHours]:
-    """
-    Get restaurants from cache only, without hitting the Yelp API.
-    This endpoint is public and does not require authentication.
-    """
     try:
-        print("🔍 Getting cached restaurants...")
-        base_restaurants = db.get_cached_restaurants(limit)
-    
-        # Get hours for all restaurants in a single query
-        restaurant_ids = [r.business_id for r in base_restaurants]
-        hours_map = await oh_db.get_hours_bulk(restaurant_ids)
+        # Get restaurants from cache
+        restaurants = db.get_cached_restaurants(limit)  # Synchronous
         
-        # Convert to RestaurantWithHours and add operating hours
-        restaurants_with_hours: List[RestaurantWithHours] = []
-        for restaurant in base_restaurants:
-            # Convert base restaurant to RestaurantWithHours
-            restaurant_dict = restaurant.model_dump()
+        # Get operating hours for each restaurant
+        restaurant_ids = [r.business_id for r in restaurants]
+        hours_map = oh_db.get_hours_bulk(restaurant_ids)  # Synchronous
+        
+        # Combine restaurants with their hours
+        results = []
+        for restaurant in restaurants:
             hours = hours_map.get(restaurant.business_id)
-            if hours:
-                restaurant_dict['operating_hours'] = OperatingHours(
-                    time_open=hours.get('time_open'),
-                    time_closed=hours.get('time_closed'),
-                    is_hours_verified=hours.get('is_hours_verified', False),
-                    is_consenting=hours.get('is_consenting', False),
-                    is_open=hours.get('is_open')
-                )
-            restaurants_with_hours.append(RestaurantWithHours(**restaurant_dict))
-
-        if fetch_images:
-            # Fetch images asynchronously for restaurants without photos
-            async def fetch_image_for_restaurant(restaurant: RestaurantWithHours):
-                if not restaurant.photos or len(restaurant.photos) == 0:
-                    try:
-                        # Simple search query with restaurant name
-                        search_query = quote(f"{restaurant.name} restaurant")
-                        images = await image_search.search_images(search_query, num=1)
-                        
-                        if images:
-                            restaurant.photos = images
-                            await db.update_restaurant(restaurant.business_id, {"photos": images})
-                            print(f"✅ Found image for {restaurant.name}")
-                    except Exception as e:
-                        print(f"⚠️ Error fetching image for {restaurant.name}: {str(e)}")
-
-            # Create tasks for restaurants without photos (limit to first 10)
-            tasks = [
-                fetch_image_for_restaurant(restaurant) 
-                for restaurant in restaurants_with_hours[:10] 
-                if not restaurant.photos or len(restaurant.photos) == 0
-            ]
+            results.append(RestaurantWithHours(
+                **restaurant.model_dump(),
+                operating_hours=hours
+            ))
             
-            if tasks:
-                # Run image fetching concurrently
-                await asyncio.gather(*tasks)
+        # Optionally fetch missing images
+        if fetch_images:
+            for restaurant in results:
+                if not restaurant.image_url:
+                    try:
+                        image_url = await image_search(f"{restaurant.name} {restaurant.location.address1}")
+                        if image_url:
+                            restaurant.image_url = image_url
+                            # Update in database
+                            await db.update_restaurant(restaurant.business_id, {"image_url": image_url})
+                    except Exception as e:
+                        print(f"❌ Failed to fetch image for {restaurant.name}: {str(e)}")
+                        continue
         
-        print(f"✅ Found {len(restaurants_with_hours)} restaurants in cache")
-        return restaurants_with_hours
+        return results
     except Exception as e:
         print(f"❌ Error getting cached restaurants: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/search", response_model=List[RestaurantWithHours])
+
+@router.get("/search")
 async def search_restaurants(
-    term: str = Query(None, description="Search term (e.g., 'coffee', 'restaurants')"),
-    location: str = Query(..., description="Location (e.g., 'San Francisco, CA')"),
-    price: Optional[str] = Query(None, description="Price level (1, 2, 3, 4)"),
-    categories: Optional[str] = Query(None, description="Category filter"),
-    auth: Optional[dict] = Depends(verify_auth_token_optional)
-) -> List[RestaurantWithHours]:
+    term: Optional[str] = None,
+    location: Optional[str] = None,
+    radius: Optional[int] = None,
+    limit: Optional[int] = 20,
+    sort_by: Optional[str] = "best_match",
+    price: Optional[str] = None,
+    categories: Optional[str] = None,
+    offset: Optional[int] = None,
+    open_now: Optional[bool] = None,
+    user: Optional[dict] = optional_auth
+) -> List[Restaurant]:
     """
-    Search for restaurants. If user is authenticated, also searches Yelp API.
+    Search for restaurants. If user is authenticated, search Yelp API.
+    Otherwise, search local database.
     """
+    db = RestaurantDB()
+    params = SearchParams(
+        term=term,
+        location=location,
+        radius=radius,
+        limit=limit,
+        sort_by=sort_by,
+        price=price,
+        categories=categories.split(",") if categories else None,
+        offset=offset,
+        open_now=open_now
+    )
+    
+    print(f"\n🔍 Searching with params: {params}")
+    
     try:
-        # Create search params with all provided filters
-        params = SearchParams(
-            term=term or "Restaurants",
-            location=location,
-            price=price,
-            categories=categories
-        )
-        
-        print(f"🔍 Searching with params: {params}")
-        
-        # First search in our database
-        stored_restaurants = await db.search_cached_restaurants(params)
-        print(f"✅ Found {len(stored_restaurants)} restaurants in cache")
-        
-        # If user is authenticated, also search Yelp
-        if auth:
-            print("🔑 User is authenticated, searching Yelp API...")
-            yelp_restaurants = await db.search_restaurants(params)
-            print(f"✅ Found {len(yelp_restaurants)} additional restaurants from Yelp")
+        # If user is authenticated, search Yelp
+        if user:
+            restaurants = await db.search_restaurants(params)
+            if restaurants:
+                return restaurants
+                
+        # Search local cache
+        cached = await db.search_cached_restaurants(params)
+        if cached:
+            print(f"✅ Found {len(cached)} restaurants in cache")
+            return cached
             
-            # Combine results, avoiding duplicates
-            seen_ids = {r.business_id for r in stored_restaurants}
-            for restaurant in yelp_restaurants:
-                if restaurant.business_id not in seen_ids:
-                    stored_restaurants.append(restaurant)
-                    seen_ids.add(restaurant.business_id)
-        
-        # Get hours for all restaurants in a single query
-        restaurant_ids = [r.business_id for r in stored_restaurants]
-        hours_map = await oh_db.get_hours_bulk(restaurant_ids)
-        
-        # Convert to RestaurantWithHours and add operating hours
-        restaurants_with_hours: List[RestaurantWithHours] = []
-        for restaurant in stored_restaurants:
-            # Convert base restaurant to RestaurantWithHours
-            restaurant_dict = restaurant.model_dump()
-            hours = hours_map.get(restaurant.business_id)
-            if hours:
-                restaurant_dict['operating_hours'] = OperatingHours(
-                    time_open=hours.get('time_open'),
-                    time_closed=hours.get('time_closed'),
-                    is_hours_verified=hours.get('is_hours_verified', False),
-                    is_consenting=hours.get('is_consenting', False),
-                    is_open=hours.get('is_open')
-                )
-            restaurants_with_hours.append(RestaurantWithHours(**restaurant_dict))
-        
-        return restaurants_with_hours
+        # If nothing in cache and user is authenticated, search Yelp
+        if user:
+            restaurants = await db.search_restaurants(params)
+            print(f"✅ Found {len(restaurants)} additional restaurants from Yelp")
+            return restaurants
+            
+        return []
         
     except Exception as e:
-        print(f"❌ Error in search_restaurants: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"❌ Search failed: {str(e)}")
+        return []
+
 
 @router.get("/{business_id}", response_model=Restaurant)
-async def get_restaurant_details(business_id: str, auth: dict = Depends(verify_auth_token)) -> Restaurant:
+async def get_restaurant_details(business_id: str, auth: dict = require_auth) -> Restaurant:
     """Get detailed information about a specific restaurant."""
     try:
         restaurant = await db.get_restaurant(business_id)
@@ -173,7 +142,7 @@ async def get_restaurant_details(business_id: str, auth: dict = Depends(verify_a
 @router.get("/search/phone", response_model=List[Restaurant])
 async def search_by_phone(
     phone: str = Query(..., description="Phone number to search for"),
-    auth: dict = Depends(verify_auth_token)
+    auth: dict = require_auth
 ) -> List[Restaurant]:
     """
     Search for restaurants by phone number.

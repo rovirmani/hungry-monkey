@@ -10,7 +10,6 @@ class OperatingHoursDB:
     def get_hours(self, restaurant_id: str) -> Optional[Dict[str, Any]]:
         """Get operating hours for a restaurant."""
         try:
-            # print(f"🔍 Getting operating hours for restaurant: {restaurant_id}")
             response = self.supabase.client.table(self.TABLE_NAME)\
                 .select("*")\
                 .eq('restaurant_id', restaurant_id)\
@@ -19,10 +18,9 @@ class OperatingHoursDB:
             if response.data:
                 print("✅ Found operating hours")
                 return response.data[0]
-            # print("⚠️ No operating hours found")
             return None
         except Exception as e:
-            # print(f"❌ Failed to get operating hours: {str(e)}")
+            print(f"❌ Failed to get operating hours: {str(e)}")
             return None
 
     def update_hours(self, restaurant_id: str, time_open: str, time_closed: str, is_open: bool) -> bool:
@@ -118,23 +116,20 @@ class OperatingHoursDB:
             print(f"❌ Failed to update consent status: {str(e)}")
             return False
 
-    async def get_hours_bulk(self, business_ids: List[str]) -> Dict[str, Dict]:
-        """Get operating hours for multiple restaurants."""
+    def get_hours_bulk(self, restaurant_ids: List[str]) -> Dict[str, Dict[str, Any]]:
+        """Get operating hours for multiple restaurants in one query."""
         try:
-            if not business_ids:
-                return {}
-                
-            print(f"\n🕒 Getting hours for {len(business_ids)} restaurants")
-            response = await self.supabase.client.table('operating_hours').select("*").in_('business_id', business_ids).execute()
+            response = self.supabase.client.table(self.TABLE_NAME)\
+                .select("*")\
+                .in_('restaurant_id', restaurant_ids)\
+                .execute()
             
-            # Convert to map of business_id -> hours
+            # Create a map of restaurant_id to hours
             hours_map = {}
             for hours in response.data:
-                hours_map[hours['business_id']] = hours
-                
-            print(f"✅ Found hours for {len(hours_map)} restaurants")
-            return hours_map
+                hours_map[hours['restaurant_id']] = hours
             
+            return hours_map
         except Exception as e:
-            print(f"❌ Failed to get hours: {str(e)}")
+            print(f"❌ Failed to get bulk operating hours: {str(e)}")
             return {}

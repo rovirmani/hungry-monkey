@@ -48,16 +48,26 @@ export const createAuthenticatedClient = (baseUrl: string, getToken: () => Promi
       if (requiresAuth) {
         console.log('Getting token for authenticated request...');
         const token = await getToken();
-        console.log('Token received:', token ? token.substring(0, 20) + '...' : 'No token');
-        if (!token) {
-          throw new Error('Authentication required but no token available');
+        if (token) {
+          console.log('Token received (first 50 chars):', token.substring(0, 50));
+          try {
+            // Log token claims for debugging (base64 decode the payload)
+            const [, payload] = token.split('.');
+            const claims = JSON.parse(atob(payload));
+            console.log('Token claims:', claims);
+          } catch (e) {
+            console.error('Error decoding token:', e);
+          }
+        } else {
+          console.warn('No token received');
         }
-        headers['Authorization'] = `Bearer ${token}`;
-        console.log('Authorization header:', headers['Authorization'].substring(0, 30) + '...');
+        
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
       }
 
       return client.request<T>(endpoint, {
-        method: 'GET',
         headers,
       });
     },
@@ -70,12 +80,23 @@ export const createAuthenticatedClient = (baseUrl: string, getToken: () => Promi
       if (requiresAuth) {
         console.log('Getting token for authenticated request...');
         const token = await getToken();
-        console.log('Token received:', token ? token.substring(0, 20) + '...' : 'No token');
-        if (!token) {
-          throw new Error('Authentication required but no token available');
+        if (token) {
+          console.log('Token received (first 50 chars):', token.substring(0, 50));
+          try {
+            // Log token claims for debugging (base64 decode the payload)
+            const [, payload] = token.split('.');
+            const claims = JSON.parse(atob(payload));
+            console.log('Token claims:', claims);
+          } catch (e) {
+            console.error('Error decoding token:', e);
+          }
+        } else {
+          console.warn('No token received');
         }
-        headers['Authorization'] = `Bearer ${token}`;
-        console.log('Authorization header:', headers['Authorization'].substring(0, 30) + '...');
+        
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
       }
 
       return client.request<T>(endpoint, {
@@ -83,6 +104,6 @@ export const createAuthenticatedClient = (baseUrl: string, getToken: () => Promi
         headers,
         body: JSON.stringify(data),
       });
-    }
+    },
   };
 };

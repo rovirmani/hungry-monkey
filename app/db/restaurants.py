@@ -67,7 +67,7 @@ class RestaurantDB:
         """
         try:
             # Use Supabase's built-in filtering
-            restaurants = await self.supabase.search_restaurants(
+            restaurants = self.supabase.search_restaurants(
                 term=params.term,
                 location=params.location,
                 price=params.price,
@@ -128,9 +128,11 @@ class RestaurantDB:
     def get_cached_restaurants(self, limit: Optional[int] = None) -> List[Restaurant]:
         """Get restaurants from the database cache."""
         try:
+            print("🔍 Getting cached restaurants...")
             stored = self.supabase.get_restaurants(limit)
             return [Restaurant(**r) for r in stored]
         except Exception as e:
+            print(f"❌ Failed to get cached restaurants: {str(e)}")
             raise Exception(f"Failed to get cached restaurants: {str(e)}")
 
     def get_stored_restaurants(self, limit: Optional[int] = None) -> List[Restaurant]:

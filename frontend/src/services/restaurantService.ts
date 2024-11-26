@@ -71,75 +71,73 @@ function transformRestaurant(backendRestaurant: any): Restaurant {
   return transformed;
 }
 
-export const useRestaurantService = () => {
+export function useRestaurantService() {
   const { getToken } = useAuth();
   
-  return useMemo(() => {
-    const apiClient = createAuthenticatedClient(API_BASE_URL, async () => {
+  const apiClient = useMemo(() => createAuthenticatedClient(API_BASE_URL, async () => {
+    try {
+      const token = await getToken({
+        template: "hungry-monkey-jwt"  // Use the configured template
+      });
+      return token;
+    } catch (error) {
+      console.error('Error getting token:', error);
+      return null;
+    }
+  }), [getToken]);
+
+  return {
+    async searchRestaurants(params: {
+      term?: string;
+      location: string;
+      price?: string;
+      categories?: string;
+    }): Promise<Restaurant[]> {
+      const searchParams = new URLSearchParams();
+      if (params.term) searchParams.append('term', params.term);
+      if (params.location) searchParams.append('location', params.location);
+      if (params.price) searchParams.append('price', convertPriceFilter(params.price) || '');
+      if (params.categories) searchParams.append('categories', params.categories);
+
+      const response = await apiClient.get<any>(
+        `/restaurants/search?${searchParams.toString()}`,
+        true
+      );
+      return response.map(transformRestaurant);
+    },
+
+    async getRestaurantDetails(businessId: string): Promise<Restaurant> {
+      const response = await apiClient.get<any>(
+        `/restaurants/${businessId}`,
+        true
+      );
+      return transformRestaurant(response);
+    },
+
+    async getCachedRestaurants(): Promise<Restaurant[]> {
       try {
-        // Get a JWT token specifically for our backend
-        const token = await getToken({
-          template: "hungry-monkey-jwt"
-        });
-        console.log('Got JWT token:', token ? 'present' : 'missing');
-        return token;
+        const response = await fetch(`${API_BASE_URL}/restaurants/cached`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        return data.map(transformRestaurant);
       } catch (error) {
-        console.error('Error getting token:', error);
-        return null;
+        console.error('Error fetching cached restaurants:', error);
+        throw error;
       }
-    });
+    },
 
-    return {
-      async searchRestaurants(params: {
-        term?: string;
-        location: string;
-        price?: string;
-        categories?: string;
-      }): Promise<Restaurant[]> {
-        const searchParams = new URLSearchParams();
-        if (params.term) searchParams.append('term', params.term);
-        if (params.location) searchParams.append('location', params.location);
-        if (params.price) searchParams.append('price', convertPriceFilter(params.price) || '');
-        if (params.categories) searchParams.append('categories', params.categories);
+    async makeCall(phoneNumber: string, message?: string): Promise<any> {
+      return apiClient.post('/vapi/call/' + phoneNumber, { message }, true);
+    },
 
-        const response = await apiClient.get<any>(
-          `/restaurants/search?${searchParams.toString()}`,
-          true  // require auth for restaurant endpoints
-        );
-        return response.map(transformRestaurant);
-      },
+    async getCallAnalysis(callId: string): Promise<any> {
+      return apiClient.get('/vapi/call-analysis/' + callId, true);
+    },
 
-      async getRestaurantDetails(businessId: string): Promise<Restaurant> {
-        const response = await apiClient.get<any>(
-          `/restaurants/${businessId}`,
-          true  // require auth for restaurant endpoints
-        );
-        return transformRestaurant(response);
-      },
-
-      async getCachedRestaurants(limit?: number, fetchImages: boolean = false): Promise<Restaurant[]> {
-        const params = new URLSearchParams();
-        if (limit) params.append('limit', limit.toString());
-        if (fetchImages) params.append('fetch_images', 'true');
-
-        const response = await apiClient.get<any>(
-          `/restaurants/cached?${params.toString()}`,
-          false  // no auth required for cached restaurants
-        );
-        return response.map(transformRestaurant);
-      },
-
-      async makeCall(phoneNumber: string, message?: string): Promise<any> {
-        return apiClient.post('/vapi/call/' + phoneNumber, { message }, true); // require auth
-      },
-
-      async getCallAnalysis(callId: string): Promise<any> {
-        return apiClient.get('/vapi/call-analysis/' + callId, true); // require auth
-      },
-
-      async checkHours(restaurantId: string): Promise<any> {
-        return apiClient.get('/vapi/check-hours/' + restaurantId, true); // require auth
-      }
-    };
-  }, [getToken]);
-};
+    async checkHours(restaurantId: string): Promise<any> {
+      return apiClient.get('/vapi/check-hours/' + restaurantId, true);
+    }
+  };
+}
