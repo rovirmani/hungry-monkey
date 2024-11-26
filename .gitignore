@@ -30,6 +30,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# Environment variables
+.env
+frontend/.env
+
 # IDEs and editors
 .idea/
 .vscode/
