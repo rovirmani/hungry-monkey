@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi import APIRouter, HTTPException, Query, Response, Depends
 from typing import List, Optional
 from ..db.restaurants import RestaurantDB
 from ..db.operating_hours import OperatingHoursDB
 from ..models import Restaurant, SearchParams, RestaurantWithHours, OperatingHours
 from ..clients.google_custom_search import image_search
+from ..middleware.auth import ClerkAuthMiddleware
 import httpx
 import asyncio
 from urllib.parse import quote
@@ -11,12 +12,14 @@ from urllib.parse import quote
 router = APIRouter()
 db = RestaurantDB()
 oh_db = OperatingHoursDB()
+auth = ClerkAuthMiddleware()
 
 
 @router.get("/cached", response_model=List[RestaurantWithHours])
 async def get_cached_restaurants(
     limit: Optional[int] = Query(None, description="Maximum number of restaurants to return"),
-    fetch_images: Optional[bool] = Query(False, description="Whether to fetch missing images")
+    fetch_images: Optional[bool] = Query(False, description="Whether to fetch missing images"),
+    token: Optional[str] = Depends(auth) if fetch_images else None
 ) -> List[RestaurantWithHours]:
     """
     Get restaurants from cache only, without hitting the Yelp API.
