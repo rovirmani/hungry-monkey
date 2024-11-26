@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from .routers import restaurants, vapi
 import asyncio
 import logging
+import os
 from .db.restaurants import RestaurantDB
 from .clients.vapi import VAPIClient
 from app.middleware.auth import ClerkAuthMiddleware
@@ -23,9 +24,15 @@ app = FastAPI(title="Restaurant Holiday Hours API")
 auth = ClerkAuthMiddleware()
 
 # Configure CORS
+origins = [
+    "http://localhost:5173",  # React dev server
+    "http://hungry-monkey-nine.vercel.app",  # Vercel production
+    os.getenv("FRONTEND_URL", ""),  # From environment variable
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # React dev server
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
