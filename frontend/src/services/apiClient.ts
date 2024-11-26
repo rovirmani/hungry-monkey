@@ -2,30 +2,33 @@ class ApiClient {
   private baseUrl: string;
 
   constructor(baseUrl: string) {
-    this.baseUrl = baseUrl;
+    // Remove any trailing slashes from the base URL
+    this.baseUrl = baseUrl.replace(/\/+$/, '');
   }
 
   async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    console.log('Making request to:', url);
-    console.log('Request options:', {
+    // Ensure endpoint starts with a slash
+    const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${this.baseUrl}${normalizedEndpoint}`;
+    
+    const response = await fetch(url, {
       ...options,
-      headers: options.headers
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
     });
     
-    const response = await fetch(url, options);
-    
     if (!response.ok) {
-      console.error('Request failed:', {
+      const errorText = await response.text();
+      console.error('API Error:', {
         status: response.status,
         statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
+        body: errorText
       });
-      const errorText = await response.text();
-      console.error('Error response:', errorText);
       throw new Error(`API call failed: ${response.statusText}`);
     }
 
