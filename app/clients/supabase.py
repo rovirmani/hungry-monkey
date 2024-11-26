@@ -68,12 +68,16 @@ class SupabaseClient:
             print(f"❌ Error type: {type(e)}")
             return []
             
-    def get_all_restaurants(self) -> List[Dict[str, Any]]:
+    def get_all_restaurants(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """Get all restaurants from the database."""
         try:
             print("🔍 Fetching restaurants from Supabase...")
+            query = self.client.table('restaurants').select('*')
+            if limit:
+                print(f"📊 Limiting to {limit} results")
+                query = query.limit(limit)
             print("🚀 Executing query...")
-            response = self.client.table('restaurants').select('*').execute()
+            response = query.execute()
             restaurants = response.data
             print(f"✅ Found {len(restaurants)} restaurants")
             if restaurants:

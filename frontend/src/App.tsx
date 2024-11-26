@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
 import { SignIn, SignUp, UserButton } from '@clerk/clerk-react';
 import { Search } from 'lucide-react';
@@ -17,6 +17,24 @@ function App() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Load cached restaurants on component mount
+  useEffect(() => {
+    const loadCachedRestaurants = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await restaurantService.getCachedRestaurants();
+        setRestaurants(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load restaurants');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCachedRestaurants();
+  }, []);
 
   const handleSearch = async () => {
     if (!search.trim()) {
