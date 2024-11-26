@@ -7,7 +7,10 @@ from ..clients.google_custom_search import image_search
 from ..auth.clerk import require_auth, optional_auth, get_optional_user
 import httpx
 import asyncio
+import logging
 from urllib.parse import quote
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 db = RestaurantDB()
@@ -20,11 +23,15 @@ async def get_cached_restaurants(
     fetch_images: Optional[bool] = Query(False, description="Whether to fetch missing images"),
 ) -> List[RestaurantWithHours]:
     try:
+        logger.info("🔄 Fetching cached restaurants")
+        
         # Get restaurants from cache
         restaurants = db.get_cached_restaurants(limit)  # Synchronous
+        logger.info(f"📦 Found {len(restaurants)} restaurants in cache")
         
         # Get operating hours for each restaurant
         restaurant_ids = [r.business_id for r in restaurants]
+        logger.info(f"⏰ Fetching hours for {len(restaurant_ids)} restaurants")
         hours_map = oh_db.get_hours_bulk(restaurant_ids)  # Synchronous
         
         # Combine restaurants with their hours
@@ -47,13 +54,18 @@ async def get_cached_restaurants(
                             # Update in database
                             await db.update_restaurant(restaurant.business_id, {"image_url": image_url})
                     except Exception as e:
-                        print(f"❌ Failed to fetch image for {restaurant.name}: {str(e)}")
+                        logger.error(f"❌ Failed to fetch image for {restaurant.name}: {str(e)}", exc_info=True)
                         continue
         
+        logger.info(f"✅ Successfully processed {len(results)} restaurants")
         return results
+            
     except Exception as e:
-        print(f"❌ Error getting cached restaurants: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"❌ Error in get_cached_restaurants: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch restaurants: {str(e)}"
+        )
 
 
 @router.get("/search")
@@ -73,51 +85,73 @@ async def search_restaurants(
     Search for restaurants. If user is authenticated, search Yelp API.
     Otherwise, search local database.
     """
-    db = RestaurantDB()
-    params = SearchParams(
-        term=term,
-        location=location,
-        radius=radius,
-        limit=limit,
-        sort_by=sort_by,
-        price=price,
-        categories=categories.split(",") if categories else None,
-        offset=offset,
-        open_now=open_now
-    )
-    
-    print(f"\n🔍 Searching with params: {params}")
-    
     try:
-        # If user is authenticated, search Yelp
-        if user:
-            restaurants = await db.search_restaurants(params)
-            if restaurants:
-                return restaurants
-                
-        # Search local cache
-        cached = await db.search_cached_restaurants(params)
-        if cached:
-            print(f"✅ Found {len(cached)} restaurants in cache")
-            return cached
-            
-        # If nothing in cache and user is authenticated, search Yelp
-        if user:
-            restaurants = await db.search_restaurants(params)
-            print(f"✅ Found {len(restaurants)} additional restaurants from Yelp")
-            return restaurants
-            
-        return []
+        db = RestaurantDB()
+        params = SearchParams(
+            term=term,
+            location=location,
+            radius=radius,
+            limit=limit,
+            sort_by=sort_by,
+            price=price,
+            categories=categories.split(",") if categories else None,
+            offset=offset,
+            open_now=open_now
+        )
         
+        logger.info(f"🔍 Searching with params: {params}")
+        logger.info(f"👤 User authenticated: {bool(user)}")
+        
+        try:
+            # If user is authenticated, search Yelp
+            if user:
+                logger.info("🔄 Attempting Yelp API search...")
+                restaurants = await db.search_restaurants(params)
+                if restaurants:
+                    logger.info(f"✅ Found {len(restaurants)} restaurants from Yelp")
+                    return restaurants
+                logger.info("⚠️ No results from Yelp API")
+                    
+            # Search local cache
+            logger.info("🔄 Searching local cache...")
+            cached = await db.search_cached_restaurants(params)
+            if cached:
+                logger.info(f"✅ Found {len(cached)} restaurants in cache")
+                return cached
+            logger.info("⚠️ No results in cache")
+                
+            # If nothing in cache and user is authenticated, search Yelp again
+            if user:
+                logger.info("🔄 Attempting final Yelp API search...")
+                restaurants = await db.search_restaurants(params)
+                if restaurants:
+                    logger.info(f"✅ Found {len(restaurants)} additional restaurants from Yelp")
+                    return restaurants
+                logger.info("⚠️ No results from final Yelp search")
+                
+            logger.info("ℹ️ No results found in any source")
+            return []
+            
+        except Exception as search_error:
+            logger.error(f"❌ Search operation failed: {str(search_error)}", exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Search operation failed: {str(search_error)}"
+            )
+            
     except Exception as e:
-        print(f"❌ Search failed: {str(e)}")
-        return []
+        logger.error(f"❌ Unexpected error in search_restaurants: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"An unexpected error occurred: {str(e)}"
+        )
 
 
 @router.get("/{business_id}", response_model=Restaurant)
 async def get_restaurant_details(business_id: str, auth: dict = require_auth) -> Restaurant:
     """Get detailed information about a specific restaurant."""
     try:
+        logger.info(f"🔍 Fetching restaurant details for {business_id}")
         restaurant = await db.get_restaurant(business_id)
         if not restaurant:
             raise HTTPException(status_code=404, detail="Restaurant not found")
@@ -128,15 +162,15 @@ async def get_restaurant_details(business_id: str, auth: dict = require_auth) ->
             images = await image_search.search_images(search_query, num=5)  # Get more images for detail view
             if images:
                 restaurant.photos = images
-                print(f"✅ Found {len(images)} images for {restaurant.name}")
+                logger.info(f"✅ Found {len(images)} images for {restaurant.name}")
             else:
-                print(f"⚠️ No images found for {restaurant.name}")
+                logger.warning(f"⚠️ No images found for {restaurant.name}")
                 
         return restaurant
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Error in get_restaurant_details: {str(e)}")
+        logger.error(f"❌ Error in get_restaurant_details: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/search/phone", response_model=List[Restaurant])
@@ -149,6 +183,8 @@ async def search_by_phone(
     Phone number should be in E.164 format (+14157492060).
     """
     try:
+        logger.info(f"📞 Searching for restaurants by phone number: {phone}")
         return await db.search_by_phone(phone)
     except Exception as e:
+        logger.error(f"❌ Error in search_by_phone: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

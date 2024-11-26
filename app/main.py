@@ -21,7 +21,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Restaurant Holiday Hours API")
+app = FastAPI(
+    title="Restaurant Holiday Hours API",
+    root_path="/api"
+)
 auth = ClerkAuthMiddleware()
 
 # Add request logging middleware
@@ -72,14 +75,14 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(restaurants.router, prefix="/api/restaurants", tags=["restaurants"])
-app.include_router(vapi.router, prefix="/api/vapi", tags=["vapi"])
+app.include_router(restaurants.router, prefix="/restaurants", tags=["restaurants"])
+app.include_router(vapi.router, prefix="/vapi", tags=["vapi"])
 
-@app.get("/api/health")
+@app.get("/health")
 async def health_check():
     return {"status": "healthy"}
 
-@app.get("/api/user/profile")
+@app.get("/user/profile")
 async def get_user_profile(token: str = Depends(auth)):
     return {"message": "This is a protected route", "token": token}
 
