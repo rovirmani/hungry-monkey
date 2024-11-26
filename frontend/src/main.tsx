@@ -5,8 +5,21 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import './index.css'
 
+// Log environment info
+console.log('🌍 Environment:', {
+  isDev: import.meta.env.DEV,
+  isProd: import.meta.env.PROD,
+  mode: import.meta.env.MODE,
+  apiUrl: import.meta.env.VITE_API_URL,
+  clerkKey: import.meta.env.VITE_CLERK_PUBLISHABLE_KEY?.substring(0, 10) + '...'
+});
+
 if (!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY) {
   throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in environment')
+}
+
+if (!import.meta.env.VITE_API_URL) {
+  throw new Error('Missing VITE_API_URL in environment')
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

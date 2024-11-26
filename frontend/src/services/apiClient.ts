@@ -4,6 +4,13 @@ class ApiClient {
   constructor(baseUrl: string) {
     // Remove any trailing slashes from the base URL
     this.baseUrl = baseUrl.replace(/\/+$/, '');
+    console.log('🔧 API Client initialized with base URL:', this.baseUrl);
+    console.log('📝 Environment:', {
+      isDevelopment: import.meta.env.DEV,
+      isProduction: import.meta.env.PROD,
+      mode: import.meta.env.MODE,
+      baseUrl: import.meta.env.VITE_API_URL
+    });
   }
 
   async request<T>(
@@ -14,25 +21,56 @@ class ApiClient {
     const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = `${this.baseUrl}${normalizedEndpoint}`;
     
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+    console.log(`🔍 Making request to: ${url}`, {
+      baseUrl: this.baseUrl,
+      endpoint: normalizedEndpoint,
+      fullUrl: url
     });
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('API Error:', {
-        status: response.status,
-        statusText: response.statusText,
-        body: errorText
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
       });
-      throw new Error(`API call failed: ${response.statusText}`);
-    }
+      
+      // Log response details
+      console.log(`📡 Response status: ${response.status} ${response.statusText}`);
+      console.log(`📋 Response headers:`, Object.fromEntries(response.headers.entries()));
+      
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        let errorMessage = `API call failed: ${response.statusText}`;
+        
+        try {
+          if (contentType?.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.detail?.message || errorData.detail || errorMessage;
+          } else {
+            const errorText = await response.text();
+            console.error('Non-JSON error response:', errorText);
+            errorMessage = `API returned non-JSON response: ${response.status} ${response.statusText}`;
+          }
+        } catch (parseError) {
+          console.error('Error parsing error response:', parseError);
+        }
+        
+        throw new Error(errorMessage);
+      }
 
-    return response.json();
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('API Request failed:', {
+        url,
+        error,
+        baseUrl: this.baseUrl,
+        endpoint: normalizedEndpoint
+      });
+      throw error;
+    }
   }
 }
 
