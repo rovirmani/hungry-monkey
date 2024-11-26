@@ -11,9 +11,9 @@ import { useRestaurantService } from './services/restaurantService';
 
 function App() {
   const restaurantService = useRestaurantService();
-  const [priceFilter, setPriceFilter] = useState<PriceFilter>(null);
+  const [priceFilter, setPriceFilter] = useState<PriceFilter>(undefined);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>({ openTime: null, closeTime: null });
-  const [starFilter, setStarFilter] = useState<StarFilter>(null);
+  const [starFilter, setStarFilter] = useState<StarFilter>(undefined);
   const [search, setSearch] = useState('');
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);

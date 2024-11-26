@@ -42,9 +42,9 @@ export interface OperatingHours {
   is_open: boolean;
 }
 
-export type PriceFilter = '$' | '$$' | '$$$' | '$$$$' | null;
+export type PriceFilter = '1' | '2' | '3' | '4' | undefined;
 export interface TimeFilter {
   openTime: string | null;
   closeTime: string | null;
 }
-export type StarFilter = 1 | 2 | 3 | 4 | 5 | null;
+export type StarFilter = number | undefined;
