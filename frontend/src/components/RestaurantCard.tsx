@@ -1,13 +1,12 @@
 import { Star } from 'lucide-react';
 import { Restaurant } from '../types';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 interface Props {
   restaurant: Restaurant;
-  onImageError: () => void;
 }
 
-export function RestaurantCard({ restaurant, onImageError }: Props) {
+export function RestaurantCard({ restaurant }: Props) {
   const [imageLoadError, setImageLoadError] = useState(false);
   
   const googleMapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
@@ -21,7 +20,6 @@ export function RestaurantCard({ restaurant, onImageError }: Props) {
 
   const handleImageError = () => {
     setImageLoadError(true);
-    onImageError();
   };
 
   const getHoursDisplay = () => {
