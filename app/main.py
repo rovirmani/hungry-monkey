@@ -7,7 +7,6 @@ import logging
 from .db.restaurants import RestaurantDB
 from .clients.vapi import VAPIClient
 from app.middleware.auth import ClerkAuthMiddleware
-from .services.call_dispatch import call_dispatch_loop
 
 # Load environment variables
 load_dotenv()
