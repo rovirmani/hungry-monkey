@@ -100,11 +100,19 @@ class RestaurantDB:
         except Exception as e:
             raise Exception(f"Failed to search by phone: {str(e)}")
 
+    def get_cached_restaurants(self, limit: Optional[int] = None) -> List[Restaurant]:
+        """Get restaurants from the database cache."""
+        try:
+            stored = self.supabase.get_restaurants(limit)
+            return [Restaurant(**r) for r in stored]
+        except Exception as e:
+            raise Exception(f"Failed to get cached restaurants: {str(e)}")
+
     def get_stored_restaurants(self, limit: Optional[int] = None) -> List[Restaurant]:
         """Get all restaurants from storage."""
         try:
             print("🔍 Getting stored restaurants from Supabase...")
-            stored = self.supabase.get_all_restaurants()
+            stored = self.supabase.get_restaurants(limit)
             restaurants = []
             
             for data in stored:
