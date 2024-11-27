@@ -5,7 +5,12 @@
       "src": "api/index.py",
       "use": "@vercel/python",
       "config": {
-        "runtime": "python3.9"
+        "runtime": "python3.9",
+        "maxLambdaSize": "15mb",
+        "handler": "index.handler",
+        "environment": {
+          "PYTHONPATH": "/var/task:/var/task/api"
+        }
       }
     },
     {
@@ -20,7 +25,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/index.py"
+      "dest": "api/index.py"
     },
     {
       "src": "^/assets/(.*)",
@@ -37,7 +42,7 @@
       "dest": "/frontend/dist/$1"
     },
     {
-      "src": "/(.*)",
+      "src": "/((?!api/.*).*)",
       "dest": "/frontend/dist/index.html"
     }
   ]
