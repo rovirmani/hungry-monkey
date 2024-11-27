@@ -60,9 +60,3 @@ class SearchParams(BaseModel):
 Restaurant.update_forward_refs()
 RestaurantWithHours.update_forward_refs()
 SearchParams.update_forward_refs()
-
-# Export all models
-__all__ = [
-    'Coordinates', 'Location', 'Category', 'OperatingHours',
-    'Restaurant', 'RestaurantWithHours', 'SearchParams'
-]

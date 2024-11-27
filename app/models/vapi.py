@@ -109,9 +109,3 @@ VAPICallResponse.update_forward_refs()
 BusinessHoursResponse.update_forward_refs()
 CallAnalysisResponse.update_forward_refs()
 
-# Export all models
-__all__ = [
-    'PhoneNumber', 'Customer', 'Assistant', 'Squad',
-    'Cost', 'Message', 'VAPICallRequest', 'VAPICallResponse',
-    'BusinessHoursResponse', 'CallAnalysisResponse'
-]
