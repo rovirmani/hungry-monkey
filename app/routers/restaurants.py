@@ -22,7 +22,11 @@ oh_db = OperatingHoursDB()
 async def get_cached_restaurants(
     limit: Optional[int] = Query(None, description="Maximum number of restaurants to return"),
     fetch_images: Optional[bool] = Query(False, description="Whether to fetch missing images"),
+    user: Optional[dict] = optional_auth
 ) -> List[RestaurantWithHours]:
+    """
+    Get cached restaurants. Authentication is optional - authenticated users get access to image fetching.
+    """
     try:
         logger.info("🔄 Fetching cached restaurants")
         
@@ -88,8 +92,8 @@ async def search_restaurants(
     user: Optional[dict] = optional_auth
 ) -> List[Restaurant]:
     """
-    Search for restaurants. If user is authenticated, search Yelp API.
-    Otherwise, search local database.
+    Search for restaurants. Always search local database first.
+    If user is authenticated and no results found, then search Yelp API.
     """
     try:
         db = RestaurantDB()
@@ -108,10 +112,17 @@ async def search_restaurants(
         logger.info(f"🔍 Searching with params: {params}")
         logger.info(f"👤 User authenticated: {bool(user)}")
         
-        # If user is authenticated, search Yelp
-        if user:
+        # Always search local cache first
+        logger.info("🔄 Searching local cache...")
+        restaurants = await db.search_cached_restaurants(params)
+        if restaurants:
+            logger.info(f"✅ Found {len(restaurants)} restaurants in cache")
+            return restaurants
+            
+        # If no results in cache and user is authenticated, try Yelp API
+        if not restaurants and user:
             try:
-                logger.info("🔄 Attempting Yelp API search...")
+                logger.info("🔄 No cache results, attempting Yelp API search...")
                 restaurants = await db.search_restaurants(params)
                 if restaurants:
                     logger.info(f"✅ Found {len(restaurants)} restaurants from Yelp")
@@ -119,15 +130,7 @@ async def search_restaurants(
                 logger.info("⚠️ No results from Yelp API")
             except Exception as e:
                 logger.error(f"❌ Yelp search failed: {str(e)}")
-                # Fall through to cache search
-                
-        # Search local cache
-        logger.info("🔄 Searching local cache...")
-        restaurants = await db.search_cached_restaurants(params)
-        if restaurants:
-            logger.info(f"✅ Found {len(restaurants)} restaurants in cache")
-            return restaurants
-            
+        
         logger.info("ℹ️ No restaurants found")
         return []
             

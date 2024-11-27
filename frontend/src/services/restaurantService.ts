@@ -76,9 +76,8 @@ export function useRestaurantService() {
   
   const apiClient = useMemo(() => createAuthenticatedClient(API_BASE_URL, async () => {
     try {
-      const token = await getToken({
-        template: "hungry-monkey-jwt"  // Use the configured template
-      });
+      // Get the session token instead of a custom JWT
+      const token = await getToken();
       return token;
     } catch (error) {
       console.error('Error getting token:', error);
