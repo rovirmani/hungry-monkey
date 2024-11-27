@@ -1,149 +1,151 @@
-# Holiday Hours Finder - Hackathon Progress Tracker
+# Hungry Monkey 🍽️
 
-## Project Status
-- Start Time: [INSERT]
-- End Time: [INSERT]
-- Time Remaining: 24:00:00
+A restaurant discovery and recommendation application that helps users find their next favorite dining spot.
 
-## Team
-- [ ] Frontend & Integration Lead (Rohan)
-- [ ] Backend & Infrastructure Lead (Greg)
+## 🚀 Features
 
-## Foundation (Hours 0-2)
+- Restaurant discovery and search
+- User authentication with Clerk
+- Restaurant recommendations
+- Supabase database integration
+- Modern React frontend with TypeScript
+- FastAPI backend with Python
 
-### Frontend
-- [ ] Initialize React + Tailwind project
-- [ ] Basic layout structure
-- [ ] Component skeleton
-- [ ] Router setup
+## 📋 Prerequisites
 
-### Backend
-- [ ] FastAPI project setup
-- [ ] Supabase connection
-- [ ] Initial schema creation
-- [ ] Basic API structure
+- Python 3.9+ (3.9.18 recommended)
+- Node.js 16+
+- npm (Node package manager)
 
-## Core Data (Hours 2-6)
+## 🛠️ Installation
 
-### Frontend
-- [ ] Yelp API integration
-- [ ] Search interface
-- [ ] Basic styling
-- [ ] Error handling
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/hungry-monkey.git
+   cd hungry-monkey
+   ```
 
-### Backend
-- [ ] Restaurant data model
-- [ ] Search endpoints
-- [ ] Filter implementation
-- [ ] Data validation
+2. **Install backend dependencies**
+   ```bash
+   python -m pip install -r requirements.txt
+   ```
 
-## Voice System (Hours 6-12)
+3. **Install frontend dependencies**
+   ```bash
+   cd frontend
+   npm install
+   cd ..
+   ```
 
-### Frontend
-- [ ] Anthropic chat flow
-- [ ] Response handling
-- [ ] Status display
-- [ ] Error states
+## 🔑 Environment Setup
 
-### Backend
-- [ ] Twilio setup
-- [ ] Call scheduling
-- [ ] Response processing
-- [ ] Status tracking
+The project uses two separate `.env` files. Example files (`.env.example`) are provided for both:
 
-## Features (Hours 12-18)
+1. **Root `.env` (Backend)**
+   ```bash
+   # Copy the example env file
+   cp .env.example .env
+   # Then edit .env with your actual values
+   ```
 
-### Frontend
-- [ ] Restaurant cards
-- [ ] Filter UI
-- [ ] Map integration
-- [ ] Responsive design
+   Required variables:
+   ```plaintext
+   # API Keys
+   YELP_API_KEY=your_yelp_api_key
+   ANTHROPIC_API_KEY=your_anthropic_api_key
 
-### Backend
-- [ ] Geolocation
-- [ ] Hours verification
-- [ ] Status endpoints
-- [ ] Performance optimization
+   # API Base URLs
+   YELP_API_BASE_URL=https://api.yelp.com/v3
+   ANTHROPIC_API_BASE_URL=https://api.anthropic.com
 
-## Integration (Hours 18-22)
+   # Supabase Configuration
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_KEY=your_supabase_key
 
-### Frontend
-- [ ] E2E testing
-- [ ] UI polish
-- [ ] Loading states
-- [ ] Final styling
+   # VAPI Configuration
+   VAPI_API_KEY=your_vapi_key
+   VAPI_ASSISTANT_ID=your_vapi_assistant_id
+   VAPI_PHONE_NUMBER_ID=your_vapi_phone_number_id
 
-### Backend
-- [ ] API testing
-- [ ] Query optimization
-- [ ] Error handling
-- [ ] Documentation
+   # Google Custom Search
+   GOOGLE_API_KEY=your_google_api_key
+   GOOGLE_SEARCH_ENGINE_ID=your_search_engine_id
 
-## Final Push (Hours 22-24)
-- [ ] Bug fixes
-- [ ] Demo prep
-- [ ] README update
-- [ ] Deployment
+   # Clerk Configuration
+   CLERK_SECRET_KEY=your_clerk_secret_key
+   CLERK_JWT_ISSUER=your_clerk_jwt_issuer
+   ```
 
-## API Keys & Resources
-- [ ] Yelp API Key: `[INSERT]`
-- [ ] Twilio Credentials: `[INSERT]`
-- [ ] Anthropic API Key: `[INSERT]`
-- [ ] Supabase URL: `[INSERT]`
-- [ ] Supabase Key: `[INSERT]`
+2. **Frontend `.env`**
+   ```bash
+   # Copy the example env file
+   cp frontend/.env.example frontend/.env
+   # Then edit .env with your actual values
+   ```
 
-## Critical Features
-- [ ] Restaurant Search
-- [ ] Holiday Hours Verification
-- [ ] Voice Calling
-- [ ] Results Display
-- [ ] Basic Filtering
+   Required variables:
+   ```plaintext
+   VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+   ```
 
-## API Status
-- [ ] Yelp API: Not Connected
-- [ ] Twilio: Not Connected
-- [ ] Anthropic: Not Connected
-- [ ] Supabase: Not Connected
+See the `.env.example` files for additional configuration variables.
 
-## Demo Checklist
-- [ ] Test data ready
-- [ ] Demo script
-- [ ] Backup screenshots
-- [ ] 2-min pitch
-- [ ] Deployed URL
+## 🚀 Running the Application
 
-## Contingency Plans
-- [ ] Replace map with static location display
-- [ ] Simplify voice system to basic verification
-- [ ] Use mock API responses
-- [ ] Reduce filter complexity
-- [ ] Pre-record demo sections
+### Development Mode (Both Frontend and Backend)
+```bash
+npm run dev
+```
 
-## Quick Links
-- Frontend Repo: [INSERT]
-- Backend Repo: [INSERT]
-- API Docs: [INSERT]
-- Design Doc: [INSERT]
-- Demo URL: [INSERT]
+### Backend Only
+```bash
+npm run dev:backend
+```
 
-## Sync Schedule
-- [ ] Hour 0: Kickoff
-- [ ] Hour 6: First Check
-- [ ] Hour 12: Midpoint
-- [ ] Hour 18: Final Stretch
-- [ ] Hour 23: Demo Prep
+### Frontend Only
+```bash
+npm run dev:frontend
+```
 
-## Notes & Blockers
+The application will be available at:
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:8000
+- API Documentation: http://localhost:8000/docs
 
-### Current Blockers
-- None yet
+## 📁 Project Structure
 
-### Priority Changes
-- None yet
+```
+hungry-monkey/
+├── app/                    # Backend application
+│   ├── routers/           # API route handlers
+│   ├── auth/              # Authentication logic
+│   └── main.py           # FastAPI application entry point
+├── frontend/              # React frontend application
+│   ├── src/
+│   │   ├── components/   # React components
+│   │   ├── services/     # API service layers
+│   │   └── pages/        # Page components
+│   └── package.json      # Node.js dependencies and scripts
+│   │   
+│   └── .env              # Frontend Environment variables
+├── requirements.txt       # Python dependencies
+└── .env                  # Environment variables (global)
+```
 
-### Team Notes
-- Project started: [TIME]
-- Next sync: [TIME]
+## 🧪 Testing
 
----
-Last Updated: [Timestamp]
+```bash
+# bro fr thought we were gonna run tests
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
