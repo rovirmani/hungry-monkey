@@ -6,21 +6,22 @@
       "use": "@vercel/python"
     },
     {
-      "src": "frontend/package.json",
+      "src": "frontend/**",
       "use": "@vercel/static-build",
       "config": {
-        "buildCommand": "npm run build",
-        "outputDirectory": "dist"
+        "distDir": "dist",
+        "buildCommand": "cd frontend && npm install && npm run build"
       }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "api/index.py"
+      "dest": "/api/index.py"
     },
     {
-      "handle": "filesystem"
+      "src": "/assets/(.*)",
+      "dest": "/frontend/dist/assets/$1"
     },
     {
       "src": "/(.*)",
