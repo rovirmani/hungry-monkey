@@ -23,48 +23,28 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Restaurant Holiday Hours API",
-    root_path="/api"
+    docs_url="/api/docs",
+    openapi_url="/api/openapi.json"
 )
+
 auth = ClerkAuthMiddleware()
 
-# Add request logging middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start_time = time.time()
-    
-    # Log request details
-    logger.info(f" Request: {request.method} {request.url}")
-    logger.info(f"Headers: {dict(request.headers)}")
-    
-    try:
-        # Get request body if it exists
-        body = await request.body()
-        if body:
-            logger.info(f"Body: {body.decode()}")
-    except Exception as e:
-        logger.error(f"Error reading body: {e}")
-    
-    # Process request
-    try:
-        response = await call_next(request)
-        
-        # Log response details
-        process_time = time.time() - start_time
-        logger.info(f" Response: {response.status_code} (took {process_time:.2f}s)")
-        
-        return response
-    except Exception as e:
-        logger.error(f" Error processing request: {str(e)}")
-        raise
+    response = await call_next(request)
+    duration = time.time() - start_time
+    logger.info(
+        f"Method: {request.method} Path: {request.url.path} "
+        f"Status: {response.status_code} Duration: {duration:.2f}s"
+    )
+    return response
 
-# Configure CORS
 origins = [
     "http://localhost:5173",  # React dev server
     "https://hungry-monkey-nine.vercel.app",  # Vercel production
-    os.getenv("FRONTEND_URL", ""),  # From environment variable
+    "http://hungry-monkey-nine.vercel.app"  # Alternate Vercel domain
 ]
-
-logger.info(f" Configured CORS origins: {origins}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -74,41 +54,45 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(restaurants.router, prefix="/restaurants", tags=["restaurants"])
-app.include_router(vapi.router, prefix="/vapi", tags=["vapi"])
+app.include_router(restaurants.router, prefix="/api")
+app.include_router(vapi.router, prefix="/api")
 
-@app.get("/health")
+@app.get("/api/health")
 async def health_check():
     return {"status": "healthy"}
 
-@app.get("/user/profile")
+@app.get("/api/me")
 async def get_user_profile(token: str = Depends(auth)):
-    return {"message": "This is a protected route", "token": token}
+    return {"token": token}
 
 async def call_dispatch_loop():
     while True:
         try:
-            logger.info("Starting call dispatch loop...")
             await dispatch_calls()
         except Exception as e:
-            logger.error(f"Error in call dispatch loop: {e}")
-        await asyncio.sleep(60)  # Wait 1 minute before next iteration
+            logger.error(f"Error in dispatch loop: {str(e)}")
+        await asyncio.sleep(60)  # Wait for 60 seconds before next dispatch
 
 async def dispatch_calls():
-    call_queue = asyncio.Queue()
-    # populate the queue with 5 oldest restaurants that haven't been checked
-    restaurants_without_hours = RestaurantDB().get_restaurants_without_hours()
-    for restaurant in restaurants_without_hours:
-        await call_queue.put(restaurant)
-    logger.info(f"Populated call queue with {len(restaurants_without_hours)} restaurants")
-    
-    while not call_queue.empty():
-        restaurant = await call_queue.get()
-        logger.info(f"Pretending to call 'check-hours' for restaurant: {restaurant['name']}")
-        await asyncio.sleep(60 * 5)  # pretend to wait 5 minutes
+    try:
+        db = RestaurantDB()
+        restaurants = db.get_restaurants_without_hours()
+        
+        if not restaurants:
+            return
+            
+        vapi_client = VAPIClient()
+        for restaurant in restaurants:
+            try:
+                await vapi_client.get_restaurant_hours(restaurant["business_id"])
+            except Exception as e:
+                logger.error(f"Failed to get hours for {restaurant['business_id']}: {str(e)}")
+                continue
+                
+    except Exception as e:
+        logger.error(f"Failed to dispatch calls: {str(e)}")
 
 @app.on_event("startup")
 async def startup_event():
-    logger.info("Starting up...")
-    asyncio.create_task(call_dispatch_loop())
+    background_tasks = BackgroundTasks()
+    background_tasks.add_task(call_dispatch_loop)
