@@ -1,4 +1,7 @@
 from __future__ import annotations
+from pydantic import BaseModel, Field, validator
+from typing import Optional, List, Dict, Union, Literal, Any
+from datetime import datetime
 
 class PhoneNumber(BaseModel):
     """Phone number configuration for VAPI calls"""
@@ -99,11 +102,6 @@ class CallAnalysisResponse(BaseModel):
     """Response model for call analysis."""
     success: bool
     data: BusinessHoursResponse
-
-# Import models after class definitions to avoid circular imports
-from pydantic import BaseModel, Field, validator
-from typing import Optional, List, Dict, Union, Literal, Any
-from datetime import datetime
 
 # Update forward refs for models that reference each other
 VAPICallRequest.update_forward_refs()
