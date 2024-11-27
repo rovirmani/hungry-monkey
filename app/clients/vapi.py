@@ -3,6 +3,7 @@ import httpx
 import os
 import re
 from dotenv import load_dotenv
+from ..models.vapi import VAPICallRequest, VAPICallResponse, Customer, BusinessHoursResponse, CallAnalysisResponse
 
 class VAPIClient:
     def __init__(self):

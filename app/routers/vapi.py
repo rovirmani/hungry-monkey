@@ -4,7 +4,7 @@ from ..clients.vapi import VAPIClient
 from ..db.operating_hours import OperatingHoursDB
 from ..db.restaurants import RestaurantDB
 from ..middleware.auth import ClerkAuthMiddleware
-from ..schemas import VAPICallRequest, BusinessHoursResponse, CallAnalysisResponse
+from ..models.vapi import VAPICallRequest, BusinessHoursResponse, CallAnalysisResponse
 import logging
 
 logger = logging.getLogger(__name__)
