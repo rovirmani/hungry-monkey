@@ -1,6 +1,4 @@
 from __future__ import annotations
-from typing import List, Optional
-from pydantic import BaseModel, Field
 
 class Coordinates(BaseModel):
     latitude: float
@@ -56,6 +54,10 @@ class SearchParams(BaseModel):
     categories: Optional[str] = None
     offset: Optional[int] = None
     open_now: Optional[bool] = None
+
+# Import models after class definitions to avoid circular imports
+from typing import List, Optional
+from pydantic import BaseModel, Field
 
 # Update forward refs for models that reference each other
 Restaurant.update_forward_refs()

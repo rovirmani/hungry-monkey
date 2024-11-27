@@ -100,12 +100,13 @@ class CallAnalysisResponse(BaseModel):
     success: bool
     data: BusinessHoursResponse
 
+# Import models after class definitions to avoid circular imports
+from pydantic import BaseModel, Field, validator
+from typing import Optional, List, Dict, Union, Literal, Any
+from datetime import datetime
+
 # Update forward refs for models that reference each other
 VAPICallRequest.update_forward_refs()
 VAPICallResponse.update_forward_refs()
 BusinessHoursResponse.update_forward_refs()
 CallAnalysisResponse.update_forward_refs()
-
-from pydantic import BaseModel, Field, validator
-from typing import Optional, List, Dict, Union, Literal, Any
-from datetime import datetime
