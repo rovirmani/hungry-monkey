@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from mangum import Mangum
 import sys
 import os
 
@@ -8,9 +9,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.main import app
 
-# This is the handler that Vercel will use
-async def handler(request):
-    return await app(request)
+# Create handler for AWS Lambda / Vercel
+handler = Mangum(app, lifespan="off")
 
 # For local development
 if __name__ == "__main__":
