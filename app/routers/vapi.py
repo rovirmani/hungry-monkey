@@ -1,10 +1,10 @@
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
 from typing import Optional
 from ..clients.vapi import VAPIClient
 from ..db.operating_hours import OperatingHoursDB
 from ..db.restaurants import RestaurantDB
 from ..middleware.auth import ClerkAuthMiddleware
+from ..schemas import VAPICallRequest, BusinessHoursResponse, CallAnalysisResponse
 import logging
 
 logger = logging.getLogger(__name__)
@@ -12,10 +12,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 vapi_client = VAPIClient()
 auth = ClerkAuthMiddleware()
-
-class VAPICallRequest(BaseModel):
-    phone_number: str
-    message: Optional[str] = "This is a call from Hungry Monkey"
 
 @router.post("/call/{phone_number}")
 async def make_call(
