@@ -43,6 +43,7 @@ async def log_requests(request: Request, call_next):
 
 origins = [
     "http://localhost:5173",  # React dev server
+    "http://localhost:8000",  # Local development server
     "https://hungry-monkey-nine.vercel.app",  # Vercel production
     "http://hungry-monkey-nine.vercel.app"  # Alternate Vercel domain
 ]
@@ -55,8 +56,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(restaurants.router, prefix="/api")
-app.include_router(vapi.router, prefix="/api")
+# Mount routers
+app.include_router(restaurants.router, prefix="/api/restaurants")
+app.include_router(vapi.router, prefix="/api/vapi")
 
 @app.get("/api/health")
 async def health_check():

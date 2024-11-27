@@ -141,26 +141,37 @@ class SupabaseClient:
             logger.error(f"❌ Error fetching restaurants without hours: {str(e)}", exc_info=True)
             raise
 
-    def search_restaurants(self, term: Optional[str] = None, location: Optional[str] = None, 
-                         price: Optional[str] = None, categories: Optional[List[str]] = None) -> List[Dict]:
+    def search_restaurants(
+        self,
+        term: Optional[str] = None,
+        location: Optional[str] = None,
+        price: Optional[str] = None,
+        categories: Optional[List[str]] = None
+    ) -> List[Dict]:
         """Search restaurants in Supabase."""
         try:
-            logger.info(f"\n🔍 Searching restaurants with term: {term}, location: {location}")
-            query = self.client.table(self.RESTAURANTS_TABLE_NAME).select("*")
+            logger.info(f"🔍 Searching restaurants with term='{term}' location='{location}'")
             
-            # Build filters
+            # Start with a base query
+            query = self.client.table(self.RESTAURANTS_TABLE_NAME)
+            
+            # Build the select query with filters
+            select_query = "*"
+            
+            # Add filters
+            filters = []
             if term:
-                query = query.ilike("name", f"%{term}%")
-            
+                filters.append(f"name.ilike.%{term}%")
             if location:
-                # Search in city field
-                query = query.filter("location->>city", "ilike", f"%{location}%")
-                
+                filters.append(f"location->>'city'.ilike.%{location}%")
             if price:
-                query = query.eq("price", price)
-                
-            if categories and len(categories) > 0:
-                query = query.contains("categories", categories)
+                filters.append(f"price.eq.{price}")
+            
+            # Execute query with filters
+            if filters:
+                query = query.select(select_query).or_(",".join(filters))
+            else:
+                query = query.select(select_query)
             
             logger.info("🚀 Executing query...")
             response = query.execute()
@@ -169,7 +180,7 @@ class SupabaseClient:
             
         except Exception as e:
             logger.error(f"❌ Failed to search restaurants: {str(e)}", exc_info=True)
-            raise
+            raise Exception(f"Failed to search restaurants: {str(e)}")
             
     async def search_restaurants_async(
         self,

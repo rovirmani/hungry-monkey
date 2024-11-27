@@ -29,7 +29,7 @@ function App() {
         const data = await restaurantService.getCachedRestaurants();
         setRestaurants(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load restaurants');
+        // Don't set error for empty results
         console.error('Error loading restaurants:', err);
       } finally {
         setLoading(false);

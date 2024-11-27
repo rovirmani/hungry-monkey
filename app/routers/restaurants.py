@@ -17,7 +17,7 @@ db = RestaurantDB()
 oh_db = OperatingHoursDB()
 
 
-@router.get("/cached", response_model=List[RestaurantWithHours])
+@router.get("/", response_model=List[RestaurantWithHours])
 async def get_cached_restaurants(
     limit: Optional[int] = Query(None, description="Maximum number of restaurants to return"),
     fetch_images: Optional[bool] = Query(False, description="Whether to fetch missing images"),
@@ -25,14 +25,19 @@ async def get_cached_restaurants(
     try:
         logger.info("🔄 Fetching cached restaurants")
         
-        # Get restaurants from cache
-        restaurants = db.get_cached_restaurants(limit)  # Synchronous
+        # Get restaurants from cache using asyncio.to_thread for CPU-bound operations
+        restaurants = await asyncio.to_thread(db.get_cached_restaurants, limit)
         logger.info(f"📦 Found {len(restaurants)} restaurants in cache")
+        
+        if not restaurants:
+            # Return empty list instead of 404
+            logger.info("ℹ️ No restaurants found in cache")
+            return []
         
         # Get operating hours for each restaurant
         restaurant_ids = [r.business_id for r in restaurants]
         logger.info(f"⏰ Fetching hours for {len(restaurant_ids)} restaurants")
-        hours_map = oh_db.get_hours_bulk(restaurant_ids)  # Synchronous
+        hours_map = await asyncio.to_thread(oh_db.get_hours_bulk, restaurant_ids)
         
         # Combine restaurants with their hours
         results = []
@@ -102,48 +107,34 @@ async def search_restaurants(
         logger.info(f"🔍 Searching with params: {params}")
         logger.info(f"👤 User authenticated: {bool(user)}")
         
-        try:
-            # If user is authenticated, search Yelp
-            if user:
+        # If user is authenticated, search Yelp
+        if user:
+            try:
                 logger.info("🔄 Attempting Yelp API search...")
                 restaurants = await db.search_restaurants(params)
                 if restaurants:
                     logger.info(f"✅ Found {len(restaurants)} restaurants from Yelp")
                     return restaurants
                 logger.info("⚠️ No results from Yelp API")
-                    
-            # Search local cache
-            logger.info("🔄 Searching local cache...")
-            cached = await db.search_cached_restaurants(params)
-            if cached:
-                logger.info(f"✅ Found {len(cached)} restaurants in cache")
-                return cached
-            logger.info("⚠️ No results in cache")
+            except Exception as e:
+                logger.error(f"❌ Yelp search failed: {str(e)}")
+                # Fall through to cache search
                 
-            # If nothing in cache and user is authenticated, search Yelp again
-            if user:
-                logger.info("🔄 Attempting final Yelp API search...")
-                restaurants = await db.search_restaurants(params)
-                if restaurants:
-                    logger.info(f"✅ Found {len(restaurants)} additional restaurants from Yelp")
-                    return restaurants
-                logger.info("⚠️ No results from final Yelp search")
-                
-            logger.info("ℹ️ No results found in any source")
-            return []
+        # Search local cache
+        logger.info("🔄 Searching local cache...")
+        restaurants = await db.search_cached_restaurants(params)
+        if restaurants:
+            logger.info(f"✅ Found {len(restaurants)} restaurants in cache")
+            return restaurants
             
-        except Exception as search_error:
-            logger.error(f"❌ Search operation failed: {str(search_error)}", exc_info=True)
-            raise HTTPException(
-                status_code=500,
-                detail=f"Search operation failed: {str(search_error)}"
-            )
+        logger.info("ℹ️ No restaurants found")
+        return []
             
     except Exception as e:
-        logger.error(f"❌ Unexpected error in search_restaurants: {str(e)}", exc_info=True)
+        logger.error(f"❌ Search operation failed: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"An unexpected error occurred: {str(e)}"
+            detail=f"Search operation failed: {str(e)}"
         )
 
 

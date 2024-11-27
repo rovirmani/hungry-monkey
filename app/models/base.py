@@ -1,6 +1,6 @@
 from __future__ import annotations
-from typing import List, Optional
 from pydantic import BaseModel, Field
+from typing import List, Optional
 
 class Coordinates(BaseModel):
     latitude: float
@@ -50,13 +50,21 @@ class SearchParams(BaseModel):
     term: Optional[str] = None
     location: str
     radius: Optional[float] = None  # in meters
+    limit: Optional[int] = 20  # default to 20 results
     sort_by: Optional[str] = "best_match"  # "best_match", "rating", "review_count", "distance"
     price: Optional[str] = None  # "1,2,3,4"
     categories: Optional[str] = None
     offset: Optional[int] = None
     open_now: Optional[bool] = None
 
-# Update forward refs for models that reference each other
+# Import any external schemas here
+# from app.models.vapi import VAPICallRequest, VAPICallResponse  # example
+
+# Update forward refs for all models that reference other models
+Coordinates.update_forward_refs()
+Location.update_forward_refs()
+Category.update_forward_refs()
+OperatingHours.update_forward_refs()
 Restaurant.update_forward_refs()
 RestaurantWithHours.update_forward_refs()
 SearchParams.update_forward_refs()

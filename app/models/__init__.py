@@ -27,9 +27,12 @@ from .vapi import (
 
 # Re-export all models
 __all__ = [
+    # Restaurant models
     'Coordinates', 'Location', 'Category', 'OperatingHours',
     'Restaurant', 'RestaurantWithHours', 'SearchParams',
-    'PhoneNumber', 'Customer', 'Assistant', 'Squad',
-    'Cost', 'Message', 'VAPICallRequest', 'VAPICallResponse',
+    
+    # VAPI models
+    'PhoneNumber', 'Customer', 'Assistant', 'Squad', 'Cost',
+    'Message', 'VAPICallRequest', 'VAPICallResponse',
     'BusinessHoursResponse', 'CallAnalysisResponse'
 ]

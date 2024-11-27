@@ -116,7 +116,7 @@ export function useRestaurantService() {
 
     async getCachedRestaurants(): Promise<Restaurant[]> {
       try {
-        const response = await fetch(`${API_BASE_URL}/restaurants/cached`);
+        const response = await fetch(`${API_BASE_URL}/restaurants`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -124,7 +124,8 @@ export function useRestaurantService() {
         return data.map(transformRestaurant);
       } catch (error) {
         console.error('Error fetching cached restaurants:', error);
-        throw error;
+        // Return empty array for network errors or other issues
+        return [];
       }
     },
 

@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import jwt
+import jwt as PyJWT
 import json
 import httpx
 import logging
@@ -37,28 +37,28 @@ async def verify_auth_token(token: str) -> Optional[dict]:
         print(f"Raw token: {token[:20]}...")
         
         # Get unverified header first
-        header = jwt.get_unverified_header(token)
+        header = PyJWT.get_unverified_header(token)
         if not header or "kid" not in header:
-            print("❌ Invalid token header")
+            print(" Invalid token header")
             return None
             
         # Get JWKS
         jwks = await get_jwks()
         if not jwks:
-            print("❌ Failed to get JWKS")
+            print(" Failed to get JWKS")
             return None
             
         # Find the key used to sign
         key = next((k for k in jwks["keys"] if k["kid"] == header["kid"]), None)
         if not key:
-            print("❌ No matching key found")
+            print(" No matching key found")
             return None
             
         # Construct the public key
-        public_key = jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(key))
+        public_key = PyJWT.algorithms.RSAAlgorithm.from_jwk(json.dumps(key))
         
         # Verify and decode with template claims
-        decoded = jwt.decode(
+        decoded = PyJWT.decode(
             token,
             public_key,
             algorithms=["RS256"],
@@ -68,17 +68,17 @@ async def verify_auth_token(token: str) -> Optional[dict]:
         
         # Verify required template claims
         if not decoded.get("sub"):
-            print("❌ Missing required claim: sub")
+            print(" Missing required claim: sub")
             return None
             
         if not decoded.get("azp"):
-            print("❌ Missing required claim: azp")
+            print(" Missing required claim: azp")
             return None
         
         return decoded
         
     except Exception as e:
-        print(f"❌ Error verifying token: {str(e)}")
+        print(f" Error verifying token: {str(e)}")
         return None
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
