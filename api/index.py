@@ -1,8 +1,16 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+import sys
+import os
+
+# Add the parent directory to Python path so we can import app
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from app.main import app
 
 # This is the handler that Vercel will use
-def handler(request):
-    return app
+async def handler(request):
+    return await app(request)
 
 # For local development
 if __name__ == "__main__":

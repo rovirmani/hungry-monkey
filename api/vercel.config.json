@@ -3,7 +3,14 @@
   "builds": [
     {
       "src": "index.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "runtime": "python3.9",
+        "handler": "index.handler",
+        "environment": {
+          "PYTHONPATH": "/var/task"
+        }
+      }
     }
   ]
 }
