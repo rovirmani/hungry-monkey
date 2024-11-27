@@ -1,6 +1,5 @@
 import os
 from typing import Dict, List, Optional, Any
-from dotenv import load_dotenv
 from supabase import create_client, Client
 import logging
 
@@ -11,7 +10,6 @@ class SupabaseClient:
     OPERATING_HOURS_TABLE_NAME = 'operating_hours' 
 
     def __init__(self):
-        load_dotenv()
         self.supabase_url = os.getenv("SUPABASE_URL")
         self.supabase_key = os.getenv("SUPABASE_KEY")
         
@@ -125,7 +123,7 @@ class SupabaseClient:
             logger.error(f"❌ Failed to bulk upsert restaurants: {str(e)}", exc_info=True)
             raise
 
-    def get_restaurants_without_hours(self) -> List[Dict[str, Any]]:
+    def get_restaurants_without_hours(self) -> List[Dict]:
         try:
 
             # if restuaraut's business_id doesnt exist in operating_hours table as restaurant_id 

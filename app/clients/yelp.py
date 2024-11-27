@@ -3,20 +3,23 @@ import os
 import json
 from typing import List, Optional, Dict, Any
 import httpx
-from dotenv import load_dotenv
+import logging
+
+logger = logging.getLogger(__name__)
 
 class YelpClient:
     def __init__(self):
-        load_dotenv()
         self.api_key = os.getenv("YELP_API_KEY")
         if not self.api_key:
-            raise ValueError("YELP_API_KEY not found in .env file")
+            logger.error("❌ YELP_API_KEY not found in environment variables")
+            raise ValueError("YELP_API_KEY not found in environment variables")
             
         self.base_url = "https://api.yelp.com/v3"
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "accept": "application/json"
         }
+        logger.info("✅ YelpClient initialized with API key")
 
     async def search_businesses(
         self,
@@ -43,7 +46,7 @@ class YelpClient:
             if categories:
                 params["categories"] = categories
                 
-            print(f"🔍 Searching Yelp API with params: {params}")
+            logger.info(f"🔍 Searching Yelp API with params: {params}")
             
             async with httpx.AsyncClient() as client:
                 response = await client.get(
@@ -87,20 +90,20 @@ class YelpClient:
                         )
                         restaurants.append(restaurant)
                     except Exception as e:
-                        print(f"❌ Failed to parse restaurant {business.get('name')}: {str(e)}")
+                        logger.error(f"❌ Failed to parse restaurant {business.get('name')}: {str(e)}")
                         continue
                 
-                print(f"✅ Found {len(restaurants)} restaurants from Yelp")
+                logger.info(f"✅ Found {len(restaurants)} restaurants from Yelp")
                 return restaurants
                 
         except Exception as e:
-            print(f"❌ Failed to search Yelp API: {str(e)}")
+            logger.error(f"❌ Failed to search Yelp API: {str(e)}")
             return []
 
     async def search_restaurants(self, params: SearchParams) -> List[Restaurant]:
         """Search for restaurants using Yelp API."""
         try:
-            print(f"Making request to: {self.base_url}/businesses/search")
+            logger.info(f"Making request to: {self.base_url}/businesses/search")
             
             # Convert parameters to Yelp API format
             search_params = {
@@ -116,8 +119,8 @@ class YelpClient:
             # Remove None values
             search_params = {k: v for k, v in search_params.items() if v is not None}
             
-            print(f"Search params: {search_params}")  # Debug log
-            print(f"Headers: {self.headers}")  # Debug log
+            logger.info(f"Search params: {search_params}")  # Debug log
+            logger.info(f"Headers: {self.headers}")  # Debug log
             
             async with httpx.AsyncClient() as client:
                 response = await client.get(
@@ -127,8 +130,8 @@ class YelpClient:
                 )
                 
                 if response.status_code != 200:
-                    print(f"Response status: {response.status_code}")
-                    print(f"Response text: {response.text}")
+                    logger.error(f"Response status: {response.status_code}")
+                    logger.error(f"Response text: {response.text}")
                     response.raise_for_status()
                     
                 data = response.json()
@@ -153,11 +156,11 @@ class YelpClient:
                 return restaurants
                 
         except httpx.HTTPError as e:
-            print(f" Error: {str(e)}")
-            print(f"Response: {e.response.text if hasattr(e, 'response') else 'No response'}")
+            logger.error(f" Error: {str(e)}")
+            logger.error(f"Response: {e.response.text if hasattr(e, 'response') else 'No response'}")
             raise
         except Exception as e:
-            print(f" Unexpected error: {str(e)}")
+            logger.error(f" Unexpected error: {str(e)}")
             raise
 
     async def get_business_details(self, business_id: str) -> Optional[Restaurant]:

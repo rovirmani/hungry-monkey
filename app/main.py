@@ -1,6 +1,5 @@
 from fastapi import FastAPI, BackgroundTasks, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
 from mangum import Mangum
 import asyncio
 import logging
@@ -10,9 +9,6 @@ from .routers import restaurants, vapi
 from .db.restaurants import RestaurantDB
 from .clients.vapi import VAPIClient
 from app.middleware.auth import ClerkAuthMiddleware
-
-# Load environment variables
-load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -57,8 +53,8 @@ app.add_middleware(
 )
 
 # Mount routers
-app.include_router(restaurants.router, prefix="/api/restaurants")
-app.include_router(vapi.router, prefix="/api/vapi")
+app.include_router(restaurants.router, prefix="/api/restaurants", tags=["restaurants"])
+app.include_router(vapi.router, prefix="/api/vapi", tags=["vapi"])
 
 @app.get("/api/health")
 async def health_check():
@@ -100,8 +96,9 @@ async def startup_event():
     background_tasks = BackgroundTasks()
     background_tasks.add_task(call_dispatch_loop)
 
-# Handler for Vercel
-handler = Mangum(app)
+# Create a handler for Vercel serverless deployment
+# Note: We need to use mangum to wrap our FastAPI app
+handler = Mangum(app, lifespan="off")
 
 # For local development
 if __name__ == "__main__":

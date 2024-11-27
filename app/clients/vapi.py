@@ -3,17 +3,23 @@ from typing import AsyncGenerator, Dict, Any
 import httpx
 import os
 import re
-from dotenv import load_dotenv
+import logging
+
+logger = logging.getLogger(__name__)
 
 class VAPIClient:
     def __init__(self):
-        load_dotenv()
         self.api_key = os.getenv("VAPI_API_KEY")
+        if not self.api_key:
+            logger.error("❌ VAPI_API_KEY not found in environment variables")
+            raise ValueError("VAPI_API_KEY not found in environment variables")
+            
         self.base_url = "https://api.vapi.ai"  # Replace with actual VAPI base URL
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
+        logger.info("✅ VAPIClient initialized with API key")
 
     def _format_phone_number(self, phone_number: str) -> str:
         """Format phone number to E.164 format (+1XXXXXXXXXX)."""
