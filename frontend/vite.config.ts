@@ -20,20 +20,28 @@ export default defineConfig(({ mode }) => {
       },
     },
     define: {
-      // Explicitly define all environment variables
       'import.meta.env.VITE_CLERK_PUBLISHABLE_KEY': JSON.stringify(env.VITE_CLERK_PUBLISHABLE_KEY),
       'import.meta.env.VITE_API_URL': JSON.stringify(env.VITE_API_URL),
     },
     optimizeDeps: {
       exclude: ['lucide-react'],
     },
+    build: {
+      outDir: 'dist',
+      assetsDir: 'assets',
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom', 'react-router-dom'],
+          },
+        },
+      },
+    },
     server: {
       proxy: {
         '/api': {
           target: 'http://localhost:8000',
           changeOrigin: true,
-          // Remove the rewrite since our backend expects /api prefix now
-          // rewrite: (path) => path.replace(/^\/api/, ''),
         },
       },
     },

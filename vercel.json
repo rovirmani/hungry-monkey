@@ -3,13 +3,17 @@
   "builds": [
     {
       "src": "api/index.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "runtime": "python3.9"
+      }
     },
     {
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "zeroConfig": true
+        "buildCommand": "cd frontend && npm install && npm run build",
+        "outputDirectory": "frontend/dist"
       }
     }
   ],
@@ -19,11 +23,22 @@
       "dest": "/api/index.py"
     },
     {
+      "src": "^/assets/(.*)",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      },
+      "dest": "/frontend/dist/assets/$1"
+    },
+    {
       "handle": "filesystem"
     },
     {
+      "src": "/(.*\\.[a-z0-9]+$)",
+      "dest": "/frontend/dist/$1"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/frontend/dist/index.html"
     }
   ]
 }
