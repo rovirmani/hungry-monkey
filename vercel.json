@@ -5,12 +5,7 @@
       "src": "api/index.py",
       "use": "@vercel/python",
       "config": {
-        "runtime": "python3.9",
-        "maxLambdaSize": "15mb",
-        "handler": "index.handler",
-        "environment": {
-          "PYTHONPATH": "/var/task:/var/task/api"
-        }
+        "runtime": "python3.9"
       }
     },
     {
@@ -25,24 +20,13 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "api/index.py"
-    },
-    {
-      "src": "^/assets/(.*)",
-      "headers": {
-        "cache-control": "public, max-age=31536000, immutable"
-      },
-      "dest": "/frontend/dist/assets/$1"
+      "dest": "/api/index.py"
     },
     {
       "handle": "filesystem"
     },
     {
-      "src": "/(.*\\.[a-z0-9]+$)",
-      "dest": "/frontend/dist/$1"
-    },
-    {
-      "src": "/((?!api/.*).*)",
+      "src": "/(.*)",
       "dest": "/frontend/dist/index.html"
     }
   ]
