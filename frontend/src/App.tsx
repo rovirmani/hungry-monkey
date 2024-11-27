@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
+<<<<<<< HEAD
 import { SignIn, SignUp, UserButton } from '@clerk/clerk-react';
+=======
+import { SignIn, SignUp, UserButton, useAuth } from '@clerk/clerk-react';
+>>>>>>> origin
 import { Search } from 'lucide-react';
 import { RestaurantCard } from './components/RestaurantCard';
 import { Filters } from './components/Filters';
@@ -10,10 +14,18 @@ import { Restaurant, PriceFilter, TimeFilter, StarFilter } from './types';
 import { useRestaurantService } from './services/restaurantService';
 
 function App() {
+<<<<<<< HEAD
   const restaurantService = useRestaurantService();
   const [priceFilter, setPriceFilter] = useState<PriceFilter>(null);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>({ openTime: null, closeTime: null });
   const [starFilter, setStarFilter] = useState<StarFilter>(null);
+=======
+  const { isSignedIn } = useAuth();
+  const restaurantService = useRestaurantService();
+  const [priceFilter, setPriceFilter] = useState<PriceFilter>(undefined);
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>({ openTime: null, closeTime: null });
+  const [starFilter, setStarFilter] = useState<StarFilter>(undefined);
+>>>>>>> origin
   const [search, setSearch] = useState('');
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);
@@ -25,17 +37,29 @@ function App() {
       try {
         setLoading(true);
         setError(null);
+<<<<<<< HEAD
         const data = await restaurantService.getCachedRestaurants(undefined, false); // fetch images without auth
         setRestaurants(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load restaurants');
+=======
+        const data = await restaurantService.getCachedRestaurants();
+        setRestaurants(data);
+      } catch (err) {
+        // Don't set error for empty results
+        console.error('Error loading restaurants:', err);
+>>>>>>> origin
       } finally {
         setLoading(false);
       }
     };
 
     loadCachedRestaurants();
+<<<<<<< HEAD
   }, [restaurantService]);
+=======
+  }, []);
+>>>>>>> origin
 
   const handleSearch = async () => {
     if (!search.trim()) {
@@ -43,14 +67,26 @@ function App() {
       return;
     }
 
+<<<<<<< HEAD
+=======
+    if (!isSignedIn) {
+      setError('Please sign in to search for restaurants');
+      return;
+    }
+
+>>>>>>> origin
     try {
       setLoading(true);
       setError(null);
       const data = await restaurantService.searchRestaurants({
         term: search.trim(),
         location: search.trim(),
+<<<<<<< HEAD
         price: priceFilter,
         open_now: timeFilter.openTime !== null
+=======
+        price: priceFilter
+>>>>>>> origin
       });
       setRestaurants(data);
     } catch (err) {

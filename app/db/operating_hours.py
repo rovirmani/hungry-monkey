@@ -10,7 +10,10 @@ class OperatingHoursDB:
     def get_hours(self, restaurant_id: str) -> Optional[Dict[str, Any]]:
         """Get operating hours for a restaurant."""
         try:
+<<<<<<< HEAD
             # print(f"🔍 Getting operating hours for restaurant: {restaurant_id}")
+=======
+>>>>>>> origin
             response = self.supabase.client.table(self.TABLE_NAME)\
                 .select("*")\
                 .eq('restaurant_id', restaurant_id)\
@@ -19,10 +22,16 @@ class OperatingHoursDB:
             if response.data:
                 print("✅ Found operating hours")
                 return response.data[0]
+<<<<<<< HEAD
             # print("⚠️ No operating hours found")
             return None
         except Exception as e:
             # print(f"❌ Failed to get operating hours: {str(e)}")
+=======
+            return None
+        except Exception as e:
+            print(f"❌ Failed to get operating hours: {str(e)}")
+>>>>>>> origin
             return None
 
     def update_hours(self, restaurant_id: str, time_open: str, time_closed: str, is_open: bool) -> bool:
@@ -119,24 +128,39 @@ class OperatingHoursDB:
             return False
 
     def get_hours_bulk(self, restaurant_ids: List[str]) -> Dict[str, Dict[str, Any]]:
+<<<<<<< HEAD
         """Get operating hours for multiple restaurants in a single query."""
         try:
             if not restaurant_ids:
                 return {}
 
             print(f"🔍 Getting operating hours for {len(restaurant_ids)} restaurants")
+=======
+        """Get operating hours for multiple restaurants in one query."""
+        try:
+>>>>>>> origin
             response = self.supabase.client.table(self.TABLE_NAME)\
                 .select("*")\
                 .in_('restaurant_id', restaurant_ids)\
                 .execute()
             
+<<<<<<< HEAD
             # Create a dictionary mapping restaurant_id to hours
+=======
+            # Create a map of restaurant_id to hours
+>>>>>>> origin
             hours_map = {}
             for hours in response.data:
                 hours_map[hours['restaurant_id']] = hours
             
+<<<<<<< HEAD
             print(f"✅ Found operating hours for {len(hours_map)} restaurants")
             return hours_map
         except Exception as e:
             print(f"❌ Failed to get operating hours in bulk: {str(e)}")
+=======
+            return hours_map
+        except Exception as e:
+            print(f"❌ Failed to get bulk operating hours: {str(e)}")
+>>>>>>> origin
             return {}

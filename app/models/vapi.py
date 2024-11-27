@@ -1,5 +1,11 @@
+<<<<<<< HEAD
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Union, Literal
+=======
+from __future__ import annotations
+from pydantic import BaseModel, Field, validator
+from typing import Optional, List, Dict, Union, Literal, Any
+>>>>>>> origin
 from datetime import datetime
 
 class PhoneNumber(BaseModel):
@@ -101,3 +107,21 @@ class CallAnalysisResponse(BaseModel):
     """Response model for call analysis."""
     success: bool
     data: BusinessHoursResponse
+<<<<<<< HEAD
+=======
+
+# Import any external schemas here if needed
+# from app.models.base import SomeModel
+
+# Update forward refs for all models that reference other models
+PhoneNumber.update_forward_refs()
+Customer.update_forward_refs()
+Assistant.update_forward_refs()
+Squad.update_forward_refs()
+Cost.update_forward_refs()
+Message.update_forward_refs()
+VAPICallRequest.update_forward_refs()
+VAPICallResponse.update_forward_refs()
+BusinessHoursResponse.update_forward_refs()
+CallAnalysisResponse.update_forward_refs()
+>>>>>>> origin
