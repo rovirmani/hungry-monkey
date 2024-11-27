@@ -50,7 +50,6 @@ class SearchParams(BaseModel):
     term: Optional[str] = None
     location: str
     radius: Optional[float] = None  # in meters
-    limit: Optional[int] = 20
     sort_by: Optional[str] = "best_match"  # "best_match", "rating", "review_count", "distance"
     price: Optional[str] = None  # "1,2,3,4"
     categories: Optional[str] = None
@@ -61,3 +60,9 @@ class SearchParams(BaseModel):
 Restaurant.update_forward_refs()
 RestaurantWithHours.update_forward_refs()
 SearchParams.update_forward_refs()
+
+# Export all models
+__all__ = [
+    'Coordinates', 'Location', 'Category', 'OperatingHours',
+    'Restaurant', 'RestaurantWithHours', 'SearchParams'
+]

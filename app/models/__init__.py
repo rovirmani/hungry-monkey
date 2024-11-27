@@ -1,8 +1,7 @@
 from __future__ import annotations
-from pydantic import BaseModel
 
-# First import base models
-from ..models import (
+# Import everything from base.py
+from .base import (
     Coordinates,
     Location,
     Category,
@@ -12,7 +11,7 @@ from ..models import (
     SearchParams
 )
 
-# Then import VAPI models
+# Import everything from vapi.py
 from .vapi import (
     PhoneNumber,
     Customer,

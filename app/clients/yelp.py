@@ -1,8 +1,10 @@
+from __future__ import annotations
 import os
+import json
 from typing import List, Optional, Dict, Any
 import httpx
 from dotenv import load_dotenv
-from app.models import Restaurant, SearchParams, Location, Coordinates, Category
+from ..models.base import Restaurant, SearchParams, Location, Coordinates, Category
 
 class YelpClient:
     def __init__(self):
