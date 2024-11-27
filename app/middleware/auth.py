@@ -3,7 +3,7 @@ from fastapi import Request, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import os
 import httpx
-from jwt import PyJWT
+import jwt
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -17,7 +17,6 @@ class ClerkAuthMiddleware(HTTPBearer):
         self.clerk_jwt_issuer = os.getenv("CLERK_JWT_ISSUER")
         if not self.clerk_jwt_issuer:
             raise ValueError("CLERK_JWT_ISSUER not found in environment variables")
-        self.jwt = PyJWT()
 
     async def verify_jwt(self, token: str) -> dict:
         try:
@@ -28,7 +27,7 @@ class ClerkAuthMiddleware(HTTPBearer):
                 jwks = response.json()
 
             # Get unverified header
-            header = self.jwt.get_unverified_header(token)
+            header = jwt.get_unverified_header(token)
             if not header or "kid" not in header:
                 raise HTTPException(status_code=401, detail="Invalid token header")
 
@@ -39,9 +38,9 @@ class ClerkAuthMiddleware(HTTPBearer):
 
             # Verify token
             try:
-                decoded = self.jwt.decode(
+                decoded = jwt.decode(
                     token,
-                    self.jwt.algorithms.RSAAlgorithm.from_jwk(key),
+                    jwt.algorithms.RSAAlgorithm.from_jwk(key),
                     algorithms=["RS256"],
                     audience=os.getenv("CLERK_JWT_AUDIENCE"),
                     issuer=self.clerk_jwt_issuer
