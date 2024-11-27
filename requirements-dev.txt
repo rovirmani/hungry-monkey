@@ -1,2 +1,0 @@
--r requirements.txt
-werkzeug==1.0.1

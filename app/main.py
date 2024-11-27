@@ -1,6 +1,7 @@
 from fastapi import FastAPI, BackgroundTasks, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from mangum import Mangum
 import asyncio
 import logging
 import os
@@ -96,3 +97,11 @@ async def dispatch_calls():
 async def startup_event():
     background_tasks = BackgroundTasks()
     background_tasks.add_task(call_dispatch_loop)
+
+# Handler for Vercel
+handler = Mangum(app)
+
+# For local development
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
