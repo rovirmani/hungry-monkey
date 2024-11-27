@@ -1,10 +1,10 @@
+from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
 from ..clients.vapi import VAPIClient
 from ..db.operating_hours import OperatingHoursDB
 from ..db.restaurants import RestaurantDB
 from ..middleware.auth import ClerkAuthMiddleware
-from ..models import VAPICallRequest, BusinessHoursResponse, CallAnalysisResponse
 import logging
 
 logger = logging.getLogger(__name__)
@@ -89,3 +89,6 @@ async def check_hours():
     except Exception as e:
         logger.error(f"Error checking hours for restaurant : {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# Import models at the bottom
+from ..models import VAPICallRequest, BusinessHoursResponse, CallAnalysisResponse

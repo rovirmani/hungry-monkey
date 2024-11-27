@@ -1,9 +1,9 @@
+from __future__ import annotations
 from typing import AsyncGenerator, Dict, Any
 import httpx
 import os
 import re
 from dotenv import load_dotenv
-from ..models import VAPICallRequest, VAPICallResponse, Customer, BusinessHoursResponse, CallAnalysisResponse
 
 class VAPIClient:
     def __init__(self):
@@ -169,3 +169,5 @@ class VAPIClient:
                 await asyncio.sleep(delay)
         
         raise Exception("Call timed out waiting for completion")
+
+from ..models import VAPICallRequest, VAPICallResponse, Customer, BusinessHoursResponse, CallAnalysisResponse

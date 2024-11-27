@@ -1,8 +1,8 @@
+from __future__ import annotations
 import logging
 from typing import List, Optional, Dict, Any
 from app.clients.supabase import SupabaseClient
 from app.clients.yelp import YelpClient
-from app.models import Restaurant, SearchParams
 
 logger = logging.getLogger(__name__)
 
@@ -217,3 +217,8 @@ class RestaurantDB:
         except Exception as e:
             logger.error(f"❌ Failed to get restaurants without hours: {str(e)}", exc_info=True)
             raise Exception(f"Failed to get restaurants without hours: {str(e)}")
+
+# Import models at the bottom
+from app.models import Restaurant, SearchParams
+
+# No need for update_forward_refs() since we're not defining any Pydantic models in this file

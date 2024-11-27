@@ -4,7 +4,6 @@ import json
 from typing import List, Optional, Dict, Any
 import httpx
 from dotenv import load_dotenv
-from ..models.base import Restaurant, SearchParams, Location, Coordinates, Category
 
 class YelpClient:
     def __init__(self):
@@ -187,3 +186,6 @@ class YelpClient:
                 
         except httpx.HTTPError:
             return None
+
+# Import models at the bottom
+from ..models.base import Restaurant, SearchParams, Location, Coordinates, Category

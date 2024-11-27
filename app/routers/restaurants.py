@@ -1,14 +1,15 @@
+from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query, Response, Depends
 from typing import List, Optional
 from ..db.restaurants import RestaurantDB
 from ..db.operating_hours import OperatingHoursDB
-from ..models import Restaurant, SearchParams, RestaurantWithHours, OperatingHours
 from ..clients.google_custom_search import image_search
 from ..auth.clerk import require_auth, optional_auth, get_optional_user
 import httpx
 import asyncio
 import logging
 from urllib.parse import quote
+from ..models import Restaurant, SearchParams, RestaurantWithHours, OperatingHours
 
 logger = logging.getLogger(__name__)
 
