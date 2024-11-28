@@ -5,6 +5,7 @@ import os
 import logging
 from dotenv import load_dotenv
 import httpx
+from pydantic import BaseModel, EmailStr
 
 # Load environment variables
 load_dotenv()
@@ -21,14 +22,24 @@ clerk_secret_key = os.getenv("CLERK_SECRET_KEY")
 if not clerk_secret_key:
     raise ValueError("CLERK_SECRET_KEY not found in environment variables")
 
-async def verify_auth_token(token: str) -> Optional[dict]:
+class UserData(BaseModel):
+    """Pydantic model for authenticated user data"""
+    session_id: str
+    user_id: str
+    email: EmailStr
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+async def verify_auth_token(token: str) -> Optional[UserData]:
     """Verify a JWT token from Clerk."""
     try:
         # Get the token parts
         decoded_token = token.split('.')
         if len(decoded_token) != 3:
             logger.error("❌ Token verification failed: Invalid token format")
-            logger.error(f"Token parts: {len(decoded_token)}")
             return None
             
         import json
@@ -36,18 +47,10 @@ async def verify_auth_token(token: str) -> Optional[dict]:
         
         # Decode and log the payload
         try:
-            # Log the raw token parts for debugging
-            logger.info("🔍 Token structure:")
-            logger.info(f"Header: {decoded_token[0]}")
-            logger.info(f"Payload (encoded): {decoded_token[1]}")
-            
             # Decode the payload
             padded = decoded_token[1] + "=" * ((4 - len(decoded_token[1]) % 4) % 4)
             decoded_bytes = base64.b64decode(padded)
             payload = json.loads(decoded_bytes.decode('utf-8'))
-            
-            logger.info("🔍 Decoded payload:")
-            logger.info(json.dumps(payload, indent=2))
             
             # Get user ID and session ID from the claims
             user_id = payload.get('sub')
@@ -55,7 +58,6 @@ async def verify_auth_token(token: str) -> Optional[dict]:
             
             if not user_id or not session_id:
                 logger.error("❌ Token verification failed: Missing user ID or session ID")
-                logger.error("Available payload keys: " + ", ".join(payload.keys()))
                 return None
             
             # Make direct HTTP request to Clerk API to get user details
@@ -71,6 +73,7 @@ async def verify_auth_token(token: str) -> Optional[dict]:
                     return None
                     
                 user_data = user_response.json()
+                email = user_data.get('email_addresses', [{}])[0].get('email_address')
                 
                 # Get session details
                 session_response = await client.get(
@@ -88,26 +91,27 @@ async def verify_auth_token(token: str) -> Optional[dict]:
                     logger.error("❌ Session is not active")
                     return None
                 
-                logger.info("✅ Token verified successfully")
-                return {
-                    "session_id": session_id,
-                    "user_id": user_id,
-                    "email": user_data.get('email_addresses', [{}])[0].get('email_address'),
-                    "first_name": user_data.get('first_name'),
-                    "last_name": user_data.get('last_name')
-                }
+                # Return user data
+                return UserData(
+                    session_id=session_id,
+                    user_id=user_id,
+                    email=email,
+                    first_name=user_data.get('first_name'),
+                    last_name=user_data.get('last_name')
+                )
                 
         except Exception as e:
-            logger.error(f"❌ Error processing token: {str(e)}")
+            logger.error(f"❌ Failed to decode token payload: {str(e)}")
             return None
             
     except Exception as e:
-        logger.error(f"❌ Unexpected error during authentication: {str(e)}")
+        logger.error(f"❌ Token verification failed: {str(e)}")
         return None
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Optional[dict]:
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> UserData:
     """Get the current authenticated user from the token."""
     user_data = await verify_auth_token(credentials.credentials)
+    logger.info(f"👤 User auth data: {user_data}")
     if not user_data:
         raise HTTPException(
             status_code=401,
@@ -117,12 +121,16 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 
 async def get_optional_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))
-) -> Optional[dict]:
+) -> Optional[UserData]:
     """Get the current user if authenticated, otherwise return None."""
+
+    logger.info(f"👤 Optional user auth data: {bool(credentials)}")
     if not credentials:
         return None
     try:
-        return await verify_auth_token(credentials.credentials)
+        user_data = await verify_auth_token(credentials.credentials)
+        logger.info(f"👤 User auth data: {user_data}")
+        return user_data
     except HTTPException:
         return None
 

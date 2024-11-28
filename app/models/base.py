@@ -1,6 +1,7 @@
 from __future__ import annotations
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict
+from datetime import datetime
 
 class Coordinates(BaseModel):
     latitude: float
@@ -36,9 +37,11 @@ class Restaurant(BaseModel):
     location: Location
     coordinates: Coordinates
     photos: List[str] = []
+    business_type: Optional[str] = None
     categories: List[Category] = []
     is_closed: Optional[bool] = None
     is_open: bool = True
+    business_type: Optional[str] = None
 
     class Config:
         populate_by_name = True
@@ -53,9 +56,19 @@ class SearchParams(BaseModel):
     limit: Optional[int] = 20  # default to 20 results
     sort_by: Optional[str] = "best_match"  # "best_match", "rating", "review_count", "distance"
     price: Optional[str] = None  # "1,2,3,4"
-    categories: Optional[str] = None
+    categories: Optional[List[str]] = None
     offset: Optional[int] = None
     open_now: Optional[bool] = None
+
+class User(BaseModel):
+    user_id: str
+    email: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    search_credits: int = 1 # Default to 1 creditsfor new users
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    is_premium: bool = False
 
 # Import any external schemas here
 # from app.models.vapi import VAPICallRequest, VAPICallResponse  # example
@@ -68,3 +81,4 @@ OperatingHours.update_forward_refs()
 Restaurant.update_forward_refs()
 RestaurantWithHours.update_forward_refs()
 SearchParams.update_forward_refs()
+User.update_forward_refs()

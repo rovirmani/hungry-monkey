@@ -5,7 +5,7 @@ import asyncio
 import logging
 import os
 import time
-from .routers import restaurants, vapi
+from .routers import restaurants, vapi, users
 from .db.restaurants import RestaurantDB
 from .clients.vapi import VAPIClient
 from app.middleware.auth import ClerkAuthMiddleware
@@ -55,6 +55,7 @@ app.add_middleware(
 # Mount routers
 app.include_router(restaurants.router, prefix="/api/restaurants", tags=["restaurants"])
 app.include_router(vapi.router, prefix="/api/vapi", tags=["vapi"])
+app.include_router(users.router, prefix="/api/users", tags=["users"])
 
 @app.get("/api/health")
 async def health_check():
