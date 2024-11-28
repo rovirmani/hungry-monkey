@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
+        'lodash': 'lodash-es'
       },
     },
     define: {
@@ -25,6 +26,7 @@ export default defineConfig(({ mode }) => {
     },
     optimizeDeps: {
       exclude: ['lucide-react'],
+      include: ['lodash/debounce']
     },
     build: {
       outDir: 'dist',
@@ -35,6 +37,7 @@ export default defineConfig(({ mode }) => {
             vendor: ['react', 'react-dom', 'react-router-dom'],
           },
         },
+        external: [],
       },
     },
     server: {

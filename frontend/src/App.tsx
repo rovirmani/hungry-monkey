@@ -9,7 +9,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Profile } from './pages/Profile';
 import { Restaurant, PriceFilter, TimeFilter, StarFilter } from './types';
 import { useRestaurantService } from './services/restaurantService';
-import debounce from 'lodash/debounce';
+import { debounce } from 'lodash';
 
 function App() {
   const { isSignedIn } = useAuth();
