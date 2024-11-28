@@ -15,7 +15,6 @@ A restaurant discovery and recommendation application that helps users find thei
 
 - Python 3.9+ (3.9.18 recommended)
 - Node.js 16+
-- Poetry (Python package manager)
 - npm (Node package manager)
 
 ## 🛠️ Installation
@@ -26,17 +25,12 @@ A restaurant discovery and recommendation application that helps users find thei
    cd hungry-monkey
    ```
 
-2. **Install Poetry (if not already installed)**
+2. **Install backend dependencies**
    ```bash
-   curl -sSL https://install.python-poetry.org | python3 -
+   python -m pip install -r requirements.txt
    ```
 
-3. **Install backend dependencies**
-   ```bash
-   poetry install
-   ```
-
-4. **Install frontend dependencies**
+3. **Install frontend dependencies**
    ```bash
    cd frontend
    npm install
@@ -133,8 +127,8 @@ hungry-monkey/
 │   │   └── pages/        # Page components
 │   └── package.json      # Node.js dependencies and scripts
 │   │   
-│   └── .env                  #Frontend Environment variables (kinda weird i know)
-├── pyproject.toml         # Python dependencies and project metadata
+│   └── .env              # Frontend Environment variables
+├── requirements.txt       # Python dependencies
 └── .env                  # Environment variables (global)
 ```
 

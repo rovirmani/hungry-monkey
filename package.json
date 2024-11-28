@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "Restaurant discovery and recommendation application",
   "scripts": {
-    "dev": "concurrently \"poetry run uvicorn app.main:app --reload\" \"cd frontend && npm run dev\"",
-    "dev:backend": "poetry run uvicorn app.main:app --reload",
+    "dev": "concurrently \"uvicorn app.main:app --reload\" \"cd frontend && npm run dev\"",
+    "dev:backend": "uvicorn app.main:app --reload",
     "dev:frontend": "cd frontend && npm run dev"
   },
   "devDependencies": {

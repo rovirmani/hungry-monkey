@@ -1,4 +1,1 @@
-from app.main import handler
-
-# Export the handler for Vercel
-app = handler
+from app.main import app
