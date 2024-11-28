@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+
 import { SignIn, SignUp, UserButton, useAuth } from '@clerk/clerk-react';
 import { Search } from 'lucide-react';
 import { RestaurantCard } from './components/RestaurantCard';
@@ -8,20 +9,17 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Profile } from './pages/Profile';
 import { Restaurant, PriceFilter, TimeFilter, StarFilter } from './types';
 import { useRestaurantService } from './services/restaurantService';
-import { createAuthenticatedClient } from './services/apiClient';
+import debounce from 'lodash/debounce';
 
 function App() {
-  const { isSignedIn, userId, getToken } = useAuth();
-  const apiClient = useMemo(() => 
-    createAuthenticatedClient(import.meta.env.VITE_API_URL, getToken),
-    [getToken] // Only recreate if getToken changes
-  );
+  const { isSignedIn } = useAuth();
   const restaurantService = useRestaurantService();
   const [priceFilter, setPriceFilter] = useState<PriceFilter>(undefined);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>({ openTime: null, closeTime: null });
   const [starFilter, setStarFilter] = useState<StarFilter>(undefined);
-  const [category, setCategory] = useState('restaurants'); // Default to restaurants
+  const [category, setCategory] = useState<string>('restaurants'); // Default to restaurants
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,23 +43,46 @@ function App() {
     loadCachedRestaurants();
   }, []);
 
-  useEffect(() => {
-    const initializeUser = async () => {
-      if (isSignedIn && userId) {
-        try {
-          await apiClient.post('/users/initialize', {}, true); // true means requiresAuth
-          console.log('✅ User initialized in database');
-        } catch (error) {
-          console.error('❌ Failed to initialize user:', error);
-        }
+  // Memoize the filtered restaurants to prevent unnecessary recalculations
+  const filteredRestaurants = useMemo(() => 
+    restaurants.filter(restaurant => {
+      if (priceFilter && restaurant.price !== priceFilter) {
+        return false;
       }
-    };
 
-    initializeUser();
-  }, [isSignedIn, userId]);
+      if (timeFilter.openTime && timeFilter.closeTime) {
+        return true;
+      }
+
+      if (starFilter && restaurant.rating < starFilter) {
+        return false;
+      }
+
+      if (category && !restaurant.categories.some(cat => cat.alias === category || cat.title.toLowerCase() === category.toLowerCase())) {
+        return false;
+      }
+
+      return true;
+    }).sort((a, b) => b.rating - a.rating),
+    [restaurants, priceFilter, timeFilter, starFilter, category]
+  );
+
+  // Debounce the search input
+  const debouncedSetSearch = useCallback(
+    debounce((value: string) => {
+      setDebouncedSearch(value);
+    }, 300),
+    []
+  );
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearch(value); // Update the input value immediately for UI
+    debouncedSetSearch(value); // Debounce the actual search state update
+  };
 
   const handleSearch = async () => {
-    if (!search.trim()) {
+    if (!debouncedSearch.trim()) {
       setError('Please enter a search term');
       return;
     }
@@ -74,13 +95,12 @@ function App() {
     try {
       setLoading(true);
       setError(null);
-      const results = await restaurantService.searchRestaurants({
-        term: search.trim(),
-        location: search.trim(),
-        price: priceFilter,
-        categories: category // Pass the selected category
+      const data = await restaurantService.searchRestaurants({
+        term: debouncedSearch.trim(),
+        location: debouncedSearch.trim(),
+        price: priceFilter
       });
-      setRestaurants(results);
+      setRestaurants(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -88,22 +108,12 @@ function App() {
     }
   };
 
-  const filteredRestaurants = restaurants.filter(restaurant => {
-    if (priceFilter && restaurant.price !== priceFilter) {
-      return false;
+  // Effect to trigger search when debounced value changes
+  useEffect(() => {
+    if (debouncedSearch) {
+      handleSearch();
     }
-
-    if (timeFilter.openTime && timeFilter.closeTime) {
-      // Add time filtering logic here if needed
-      return true;
-    }
-
-    if (starFilter && restaurant.rating < starFilter) {
-      return false;
-    }
-
-    return true;
-  }).sort((a, b) => b.rating - a.rating);
+  }, [debouncedSearch]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -145,8 +155,7 @@ function App() {
                         type="text"
                         placeholder="Enter a location to search for restaurants..."
                         value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                        onChange={handleInputChange}
                         className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
@@ -184,13 +193,7 @@ function App() {
                   </div>
                 ) : filteredRestaurants.length === 0 ? (
                   <div className="text-center py-12">
-                     <p className="text-gray-500 text-lg">No restaurants found matching your criteria.</p>
-                    <span 
-                      className="text-transparent text-lg bg-clip-text bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-400 font-semibold"
-                    >
-                      Purchase a premium account to search new restaurants.
-                    </span>
-                    <br />
+                    <p className="text-gray-500 text-lg">No restaurants found matching your criteria.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

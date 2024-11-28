@@ -65,7 +65,8 @@ class UserDB:
                 logger.info(f"✅ User {user_id} has {user.search_credits} search credits")
                 self.supabase.client.table(self.TABLE_NAME).update({
                     'search_credits': user.search_credits - 1,
-                    'updated_at': 'now()'
+                    'updated_at': 'now()',
+                    'is_premium': user.is_premium
                 }).eq('user_id', user_id).execute()
                 return True
                 
