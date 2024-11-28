@@ -1,10 +1,11 @@
 from __future__ import annotations
-from fastapi import APIRouter, HTTPException, Query, Response, Depends
+from fastapi import APIRouter, HTTPException, Query, Response, Depends, Request
 from typing import List, Optional
 from ..db.restaurants import RestaurantDB
 from ..db.operating_hours import OperatingHoursDB
+from ..db.users import UserDB
 from ..clients.google_custom_search import image_search
-from ..auth.clerk import require_auth, optional_auth, get_optional_user
+from ..auth.clerk import require_auth, optional_auth, get_optional_user, UserData
 import httpx
 import asyncio
 import logging
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 db = RestaurantDB()
 oh_db = OperatingHoursDB()
+user_db = UserDB()
 
 
 @router.get("/", response_model=List[RestaurantWithHours])
@@ -80,6 +82,7 @@ async def get_cached_restaurants(
 
 @router.get("/search")
 async def search_restaurants(
+    request: Request,
     term: Optional[str] = None,
     location: Optional[str] = None,
     radius: Optional[int] = None,
@@ -89,7 +92,7 @@ async def search_restaurants(
     categories: Optional[str] = None,
     offset: Optional[int] = None,
     open_now: Optional[bool] = None,
-    user: Optional[dict] = optional_auth
+    user: Optional[UserData] = optional_auth
 ) -> List[Restaurant]:
     """
     Search for restaurants. Always search local database first.
@@ -110,8 +113,10 @@ async def search_restaurants(
         )
         
         logger.info(f"🔍 Searching with params: {params}")
-        logger.info(f"👤 User authenticated: {bool(user)}")
-        
+        logger.info(f"👤 User authenticated: {user.first_name} {user.last_name}")
+
+        is_search_permitted = await user_db.is_search_permitted(user.user_id)
+        logger.info(f"✅ User search permitted: {is_search_permitted}") 
         # Always search local cache first
         logger.info("🔄 Searching local cache...")
         restaurants = await db.search_cached_restaurants(params)
@@ -120,7 +125,7 @@ async def search_restaurants(
             return restaurants
             
         # If no results in cache and user is authenticated, try Yelp API
-        if not restaurants and user:
+        if (not restaurants or len(restaurants) < 10) and is_search_permitted:
             try:
                 logger.info("🔄 No cache results, attempting Yelp API search...")
                 restaurants = await db.search_restaurants(params)

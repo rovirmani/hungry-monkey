@@ -148,28 +148,21 @@ class SupabaseClient:
     ) -> List[Dict]:
         """Search restaurants in Supabase."""
         try:
-            logger.info(f"🔍 Searching restaurants with term='{term}' location='{location}'")
+            logger.info(f"🔍 Searching restaurants with term='{term}' location='{location}' categories={categories}")
             
             # Start with a base query
-            query = self.client.table(self.RESTAURANTS_TABLE_NAME)
+            query = self.client.table(self.RESTAURANTS_TABLE_NAME).select("*")
             
-            # Build the select query with filters
-            select_query = "*"
-            
-            # Add filters
-            filters = []
+            # Add filters one by one
             if term:
-                filters.append(f"name.ilike.%{term}%")
+                # Search in both name and categories using OR
+                query = query.ilike("name", f"%{term}%")
             if location:
-                filters.append(f"location->>'city'.ilike.%{location}%")
+                query = query.ilike("location->>city", f"%{location}%")
             if price:
-                filters.append(f"price.eq.{price}")
-            
-            # Execute query with filters
-            if filters:
-                query = query.select(select_query).or_(",".join(filters))
-            else:
-                query = query.select(select_query)
+                query = query.eq("price", price)
+            if categories and len(categories) > 0:
+                query = query.eq("business_type", categories[0])
             
             logger.info("🚀 Executing query...")
             response = query.execute()
@@ -185,28 +178,28 @@ class SupabaseClient:
         term: Optional[str] = None,
         location: Optional[str] = None,
         price: Optional[str] = None,
-        categories: Optional[str] = None
+        categories: Optional[List[str]] = None
     ) -> List[Dict]:
         """Search for restaurants in Supabase."""
         try:
-            logger.info(f"\n🔍 Searching restaurants with term='{term}' location='{location}'")
+            logger.info(f"\n🔍 Searching restaurants with term='{term}' location='{location}' categories={categories}")
             
-            # Build query conditions
-            conditions = []
-            if location:
-                conditions.append(f"location.ilike.%{location}%")
+            # Start with base query
+            query = self.client.table(self.RESTAURANTS_TABLE_NAME).select("*")
+            
+            # Add filters one by one
             if term:
-                conditions.append(f"name.ilike.%{term}%")
-                conditions.append(f"categories.ilike.%{term}%")
+                # Search in both name and categories using OR
+                query = query.ilike("name", f"%{term}%").or_("categories.ilike.%{term}%")
+            if location:
+                query = query.ilike("location->>city", f"%{location}%")
             if price:
-                conditions.append(f"price.eq.{price}")
-            if categories:
-                conditions.append(f"categories.ilike.%{categories}%")
-                
-            # Execute query with OR conditions for term
-            query_str = ",".join(conditions)
-            response = await self.client.table(self.RESTAURANTS_TABLE_NAME).select("*").or_(query_str).execute()
+                query = query.eq("price", price)
+            if categories and len(categories) > 0:
+                query = query.eq("business_type", categories[0])
             
+            logger.info("🚀 Executing query...")
+            response = await query.execute()
             logger.info(f"✅ Found {len(response.data)} restaurants")
             return response.data
             

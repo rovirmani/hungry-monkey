@@ -26,7 +26,7 @@ class YelpClient:
         term: Optional[str] = None,
         location: str = None,
         price: Optional[str] = None,
-        categories: Optional[str] = None,
+        categories: str = "restaurants",
         limit: Optional[int] = 20,
         sort_by: Optional[str] = "best_match"
     ) -> List[Restaurant]:
@@ -39,12 +39,11 @@ class YelpClient:
                 "term": term or "restaurants",
                 "location": location,
                 "limit": limit,
-                "sort_by": sort_by
+                "sort_by": sort_by,
+                "categories": categories
             }
             if price:
                 params["price"] = price
-            if categories:
-                params["categories"] = categories
                 
             logger.info(f"🔍 Searching Yelp API with params: {params}")
             
@@ -82,10 +81,9 @@ class YelpClient:
                                 longitude=business["coordinates"]["longitude"]
                             ),
                             photos=[business.get("image_url")] if business.get("image_url") else [],
-                            categories=[
-                                Category(alias=cat["alias"], title=cat["title"])
-                                for cat in business.get("categories", [])
-                            ],
+                            business_type="restaurants" if "grocery" not in [cat["alias"] for cat in business.get("categories", [])] else "grocery"
+                            ,
+                            categories=[Category(**cat) for cat in business.get("categories", [])],
                             is_closed=business.get("is_closed", False)
                         )
                         restaurants.append(restaurant)
