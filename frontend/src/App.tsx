@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
 import { SignIn, SignUp, UserButton, useAuth } from '@clerk/clerk-react';
 import { Search } from 'lucide-react';
@@ -8,13 +8,19 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Profile } from './pages/Profile';
 import { Restaurant, PriceFilter, TimeFilter, StarFilter } from './types';
 import { useRestaurantService } from './services/restaurantService';
+import { createAuthenticatedClient } from './services/apiClient';
 
 function App() {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, userId, getToken } = useAuth();
+  const apiClient = useMemo(() => 
+    createAuthenticatedClient(import.meta.env.VITE_API_URL, getToken),
+    [getToken] // Only recreate if getToken changes
+  );
   const restaurantService = useRestaurantService();
   const [priceFilter, setPriceFilter] = useState<PriceFilter>(undefined);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>({ openTime: null, closeTime: null });
   const [starFilter, setStarFilter] = useState<StarFilter>(undefined);
+  const [category, setCategory] = useState('restaurants'); // Default to restaurants
   const [search, setSearch] = useState('');
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);
@@ -39,6 +45,21 @@ function App() {
     loadCachedRestaurants();
   }, []);
 
+  useEffect(() => {
+    const initializeUser = async () => {
+      if (isSignedIn && userId) {
+        try {
+          await apiClient.post('/users/initialize', {}, true); // true means requiresAuth
+          console.log('✅ User initialized in database');
+        } catch (error) {
+          console.error('❌ Failed to initialize user:', error);
+        }
+      }
+    };
+
+    initializeUser();
+  }, [isSignedIn, userId]);
+
   const handleSearch = async () => {
     if (!search.trim()) {
       setError('Please enter a search term');
@@ -53,12 +74,13 @@ function App() {
     try {
       setLoading(true);
       setError(null);
-      const data = await restaurantService.searchRestaurants({
+      const results = await restaurantService.searchRestaurants({
         term: search.trim(),
         location: search.trim(),
-        price: priceFilter
+        price: priceFilter,
+        categories: category // Pass the selected category
       });
-      setRestaurants(data);
+      setRestaurants(results);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -146,6 +168,8 @@ function App() {
                 setTimeFilter={setTimeFilter}
                 starFilter={starFilter}
                 setStarFilter={setStarFilter}
+                category={category}
+                setCategory={setCategory}
               />
 
               <main className="max-w-6xl mx-auto px-4 py-8">
@@ -160,7 +184,13 @@ function App() {
                   </div>
                 ) : filteredRestaurants.length === 0 ? (
                   <div className="text-center py-12">
-                    <p className="text-gray-500 text-lg">No restaurants found matching your criteria.</p>
+                     <p className="text-gray-500 text-lg">No restaurants found matching your criteria.</p>
+                    <span 
+                      className="text-transparent text-lg bg-clip-text bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-400 font-semibold"
+                    >
+                      Purchase a premium account to search new restaurants.
+                    </span>
+                    <br />
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

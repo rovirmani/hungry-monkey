@@ -1,4 +1,4 @@
-import { Clock, DollarSign, Star } from 'lucide-react';
+import { Clock, DollarSign, Star, Store } from 'lucide-react';
 import { PriceFilter, TimeFilter, StarFilter } from '../types';
 import clsx from 'clsx';
 
@@ -9,6 +9,8 @@ interface Props {
   setTimeFilter: (time: TimeFilter) => void;
   starFilter: StarFilter;
   setStarFilter: (stars: StarFilter) => void;
+  category: string;
+  setCategory: (category: string) => void;
 }
 
 const generateTimeOptions = () => {
@@ -28,7 +30,9 @@ export function Filters({
   timeFilter, 
   setTimeFilter,
   starFilter,
-  setStarFilter 
+  setStarFilter,
+  category,
+  setCategory
 }: Props) {
   const prices: ('$' | '$$' | '$$$' | '$$$$')[] = ['$', '$$', '$$$', '$$$$'];
   const stars: StarFilter[] = [1, 2, 3, 4, 5];
@@ -38,6 +42,34 @@ export function Filters({
     <div className="sticky top-0 bg-white shadow-sm p-4 z-10">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex items-center gap-2">
+            <Store className="w-5 h-5 text-gray-500" />
+            <div className="flex rounded-full border border-gray-300 p-1">
+              <button
+                onClick={() => setCategory('restaurants')}
+                className={clsx(
+                  'px-3 py-1 rounded-full text-sm font-medium transition-colors',
+                  category === 'restaurants'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                )}
+              >
+                Restaurants
+              </button>
+              <button
+                onClick={() => setCategory('grocery')}
+                className={clsx(
+                  'px-3 py-1 rounded-full text-sm font-medium transition-colors',
+                  category === 'grocery'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                )}
+              >
+                Grocery
+              </button>
+            </div>
+          </div>
+
           <div className="flex items-center gap-2">
             <DollarSign className="w-5 h-5 text-gray-500" />
             <div className="flex gap-1">
