@@ -10,6 +10,7 @@ import { Restaurant, PriceFilter, TimeFilter, StarFilter } from './types';
 import { useRestaurantService } from './services/restaurantService';
 import { createAuthenticatedClient } from './services/apiClient';
 
+
 function App() {
   const { isSignedIn, userId, getToken } = useAuth();
   const apiClient = useMemo(() => 
@@ -105,107 +106,117 @@ function App() {
     return true;
   }).sort((a, b) => b.rating - a.rating);
 
+  const options = {
+    // passing the client secret obtained from the server
+    clientSecret: '{{CLIENT_SECRET}}',
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm p-4">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="flex space-x-4">
-            <Link to="/" className="text-gray-700 hover:text-gray-900">Home</Link>
-            <Link to="/profile" className="text-gray-700 hover:text-gray-900">Profile</Link>
-          </div>
-          <UserButton afterSignOutUrl="/" />
-        </div>
-      </nav>
-
-      <div className="container mx-auto py-8">
-        <Routes>
-          <Route path="/sign-in/*" element={<SignIn routing="path" path="/sign-in" />} />
-          <Route path="/sign-up/*" element={<SignUp routing="path" path="/sign-up" />} />
-          <Route path="/profile" element={
-            <ProtectedRoute>
-              <Profile />
-            </ProtectedRoute>
-          } />
-          <Route path="/" element={
-            <div>
-              <header className="bg-white shadow-sm">
-                <div className="max-w-6xl mx-auto px-4 py-6">
-                  <div className="flex items-baseline gap-6">
-                    <h1 className="text-3xl font-bold">
-                      <span className="bg-gradient-to-r from-red-500 to-pink-500 text-transparent bg-clip-text">
-                        Hungry Monkey
-                      </span>
-                    </h1>
-                    <h2 className="text-xl text-gray-600">Holiday Restaurant Finder</h2>
-                  </div>
-                  <div className="mt-4 flex gap-2">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                      <input
-                        type="text"
-                        placeholder="Enter a location to search for restaurants..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
-                    <button
-                      onClick={handleSearch}
-                      disabled={loading}
-                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {loading ? 'Searching...' : 'Search'}
-                    </button>
-                  </div>
-                </div>
-              </header>
-
-              <Filters
-                priceFilter={priceFilter}
-                setPriceFilter={setPriceFilter}
-                timeFilter={timeFilter}
-                setTimeFilter={setTimeFilter}
-                starFilter={starFilter}
-                setStarFilter={setStarFilter}
-                category={category}
-                setCategory={setCategory}
-              />
-
-              <main className="max-w-6xl mx-auto px-4 py-8">
-                {loading ? (
-                  <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-                    <p className="text-gray-500 text-lg mt-4">Loading restaurants...</p>
-                  </div>
-                ) : error ? (
-                  <div className="text-center py-12">
-                    <p className="text-red-500 text-lg">{error}</p>
-                  </div>
-                ) : filteredRestaurants.length === 0 ? (
-                  <div className="text-center py-12">
-                     <p className="text-gray-500 text-lg">No restaurants found matching your criteria.</p>
-                    <span 
-                      className="text-transparent text-lg bg-clip-text bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-400 font-semibold"
-                    >
-                      Purchase a premium account to search new restaurants.
-                    </span>
-                    <br />
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredRestaurants.map((restaurant) => (
-                      <RestaurantCard 
-                        key={restaurant.business_id} 
-                        restaurant={restaurant}
-                      />
-                    ))}
-                  </div>
-                )}
-              </main>
+    <div>
+      <div className="min-h-screen bg-gray-100">
+        <nav className="bg-white shadow-lg p-4">
+          <div className="container mx-auto flex justify-between items-center">
+            <div className="flex space-x-4">
+              <Link to="/" className="text-gray-700 hover:text-gray-900">Home</Link>
+              <Link to="/profile" className="text-gray-700 hover:text-gray-900">Profile</Link>
             </div>
-          } />
-        </Routes>
+            <UserButton afterSignOutUrl="/" />
+          </div>
+        </nav>
+
+        <main className="">
+          <Routes>
+            <Route path="/sign-in/*" element={<SignIn routing="path" path="/sign-in" />} />
+            <Route path="/sign-up/*" element={<SignUp routing="path" path="/sign-up" />} />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/" element={
+              <div>
+                <header className="bg-white shadow-lg">
+                  <div className="max-w-6xl mx-auto px-4 py-6">
+                    <div className="flex items-baseline gap-6">
+                      <h1 className="text-3xl font-bold">
+                        <span className="bg-gradient-to-r from-red-500 to-pink-500 text-transparent bg-clip-text">
+                          Hungry Monkey
+                        </span>
+                      </h1>
+                      <h2 className="text-xl text-gray-600">Holiday Restaurant Finder</h2>
+                    </div>
+                    <div className="mt-4 flex gap-2">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <input
+                          type="text"
+                          placeholder="Enter a location to search for restaurants..."
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                      <button
+                        onClick={handleSearch}
+                        disabled={loading}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loading ? 'Searching...' : 'Search'}
+                      </button>
+                    </div>
+                  </div>
+                </header>
+
+                <Filters
+                  priceFilter={priceFilter}
+                  setPriceFilter={setPriceFilter}
+                  timeFilter={timeFilter}
+                  setTimeFilter={setTimeFilter}
+                  starFilter={starFilter}
+                  setStarFilter={setStarFilter}
+                  category={category}
+                  setCategory={setCategory}
+                />
+
+                <main className="max-w-6xl mx-auto px-4 py-8">
+                  {loading ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+                      <p className="text-gray-500 text-lg mt-4">Loading {category}...</p>
+                    </div>
+                  ) : error ? (
+                    <div className="text-center py-12">
+                      <p className="text-red-500 text-lg">{error}</p>
+                    </div>
+                  ) : filteredRestaurants.length === 0 ? (
+                    <div className="text-center py-12">
+                      <p className="text-gray-500 text-lg">No restaurants found matching your criteria.</p>
+                      <span 
+                        className="text-transparent text-lg bg-clip-text bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-400 font-semibold"
+                      >
+                        Purchase a premium account to search new restaurants.
+                      </span>
+                      <br />
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {filteredRestaurants.map((restaurant) => (
+                        <RestaurantCard 
+                          key={restaurant.business_id} 
+                          restaurant={restaurant}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </main>
+              </div>
+            } />
+          </Routes>
+        </main>
       </div>
     </div>
   );

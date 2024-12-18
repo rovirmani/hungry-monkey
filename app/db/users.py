@@ -1,9 +1,13 @@
 from __future__ import annotations
+
 import logging
-from typing import Dict, Optional
 from datetime import datetime
+from typing import Dict, Optional
+
 from pydantic import BaseModel
-from app.clients.supabase import SupabaseClient
+from supabase import create_client
+
+from ..utils.constants import SUPABASE_KEY, SUPABASE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +23,7 @@ class UserDB:
     TABLE_NAME = "user_table"
 
     def __init__(self):
-        self.supabase = SupabaseClient()
+        self.supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
     async def create_user(self, user_data: Dict):
         try:

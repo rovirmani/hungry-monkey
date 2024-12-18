@@ -1,0 +1,9 @@
+import os
+
+ENABLE_CALLS = False
+RESTAURANT_CALL_DELAY = 120
+SUPABASE_URL= os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+RESTAURANTS_TABLE_NAME = "restaurants"
+OPERATING_HOURS_TABLE_NAME = "operating_hours"

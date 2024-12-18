@@ -1,14 +1,17 @@
-from fastapi import FastAPI, BackgroundTasks, Depends, Request
-from fastapi.middleware.cors import CORSMiddleware
-from mangum import Mangum
 import asyncio
 import logging
 import os
 import time
-from .routers import restaurants, vapi, users
-from .db.restaurants import RestaurantDB
-from .clients.vapi import VAPIClient
+
 from app.middleware.auth import ClerkAuthMiddleware
+from fastapi import BackgroundTasks, Depends, FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from mangum import Mangum
+
+from .clients.vapi import VAPIClient
+from .db.restaurants import RestaurantDB
+from .routers import restaurants, users, vapi
+from .utils.constants import RESTAURANT_CALL_DELAY
 
 # Configure logging
 logging.basicConfig(
@@ -25,6 +28,7 @@ app = FastAPI(
 )
 
 auth = ClerkAuthMiddleware()
+vapi_client = VAPIClient()
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -61,41 +65,11 @@ app.include_router(users.router, prefix="/api/users", tags=["users"])
 async def health_check():
     return {"status": "healthy"}
 
-@app.get("/api/me")
-async def get_user_profile(token: str = Depends(auth)):
-    return {"token": token}
-
-async def call_dispatch_loop():
-    while True:
-        try:
-            await dispatch_calls()
-        except Exception as e:
-            logger.error(f"Error in dispatch loop: {str(e)}")
-        await asyncio.sleep(60)  # Wait for 60 seconds before next dispatch
-
-async def dispatch_calls():
-    try:
-        db = RestaurantDB()
-        restaurants = db.get_restaurants_without_hours()
-        
-        if not restaurants:
-            return
-            
-        vapi_client = VAPIClient()
-        for restaurant in restaurants:
-            try:
-                await vapi_client.get_restaurant_hours(restaurant["business_id"])
-            except Exception as e:
-                logger.error(f"Failed to get hours for {restaurant['business_id']}: {str(e)}")
-                continue
-                
-    except Exception as e:
-        logger.error(f"Failed to dispatch calls: {str(e)}")
-
 @app.on_event("startup")
 async def startup_event():
-    background_tasks = BackgroundTasks()
-    background_tasks.add_task(call_dispatch_loop)
+    logger.info("Backgroung - Starting call dispatch loop")
+    asyncio.create_task(vapi_client.call_dispatch_loop())
+
 
 # Create a handler for Vercel serverless deployment
 # Note: We need to use mangum to wrap our FastAPI app

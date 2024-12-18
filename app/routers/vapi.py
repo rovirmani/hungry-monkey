@@ -43,33 +43,6 @@ async def get_call_analysis(
             detail=str(e)
         )
 
-@router.get("/check-hours/{restaurant_id}")
-async def check_hours(
-    restaurant_id: str,
-    token: str = Depends(auth)
-):
-    try:
-        hours_db = OperatingHoursDB()
-        restaurant_db = RestaurantDB()
-        print(f"🔍 Calling to check hours for restaurant: {restaurant_id}")
-        # get phone number from restaurant id
-        restaurant = await restaurant_db.get_restaurant(restaurant_id)
-        phone_number = restaurant.phone
-
-        call_id = await vapi_client.make_call(phone_number, "This is a call to check hours")
-        await vapi_client.wait_for_call_completion(call_id)
-        analysis = await vapi_client.get_call_analysis(call_id)
-        structured_data = analysis.get("structuredData", {})
-        successEvaluation = analysis.get("successEvaluation", False)
-
-        if successEvaluation and structured_data and "time_open" in structured_data and "time_closed" in structured_data:
-            print(f"✅ Updating hours for restaurant: {restaurant_id}")
-            hours_db.update_hours(restaurant_id, structured_data.get("time_open"), structured_data.get("time_closed"), structured_data.get("is_open"))
-
-        return {"successEvaluation": successEvaluation, "message": f"Got hours from VAPI. {structured_data}"}
-    except Exception as e:
-        logger.error(f"Error checking hours for restaurant {restaurant_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/test/test_check_hours")
 async def check_hours():

@@ -1,9 +1,30 @@
 from __future__ import annotations
-from typing import AsyncGenerator, Dict, Any
-import httpx
+
+import asyncio
+import logging
 import os
 import re
-import logging
+import time
+from typing import Any, AsyncGenerator, Dict
+
+import httpx
+from fastapi import HTTPException
+
+from ..db.operating_hours import OperatingHoursDB
+from ..db.restaurants import RestaurantDB
+from ..models import (
+    BusinessHoursResponse,
+    CallAnalysisResponse,
+    Customer,
+    VAPICallRequest,
+    VAPICallResponse,
+)
+from ..utils.constants import (
+    ENABLE_CALLS,
+    RESTAURANT_CALL_DELAY,
+    SUPABASE_KEY,
+    SUPABASE_URL,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -176,4 +197,87 @@ class VAPIClient:
         
         raise Exception("Call timed out waiting for completion")
 
-from ..models import VAPICallRequest, VAPICallResponse, Customer, BusinessHoursResponse, CallAnalysisResponse
+    async def check_hours(self, restaurant_id: str) -> Optional[Dict[str, Any]]:
+        try:
+            hours_db = OperatingHoursDB()
+            restaurant_db = RestaurantDB()
+            print(f"🔍 Calling to check hours for restaurant: {restaurant_id}")
+            # get phone number from restaurant id
+            restaurant = await restaurant_db.get_restaurant(restaurant_id)
+            phone_number = restaurant.phone
+
+            if ENABLE_CALLS:
+
+                call_id = await self.make_call(phone_number, "This is a call to check hours")
+                await self.wait_for_call_completion(call_id)
+                analysis = await self.get_call_analysis(call_id)
+                structured_data = analysis.get("structuredData", {})
+                successEvaluation = analysis.get("successEvaluation", False)
+            else:
+                print(f"👨‍🍳 Skipping call to restaurant ${restaurant_id} because ENABLE_CALLS is False")
+                structured_data = {
+                    "time_open": "N/A",
+                    "time_closed": "N/A",
+                    "is_open": False,
+                }
+                successEvaluation = False
+
+
+            if successEvaluation and structured_data and "time_open" in structured_data and "time_closed" in structured_data:
+                print(f"✅ Updating hours for restaurant: {restaurant_id}")
+                hours_db.update_hours(restaurant_id, structured_data.get("time_open"), structured_data.get("time_closed"), structured_data.get("is_open"))
+                restaurant.is_open = structured_data.get("is_open")
+                restaurant.is_hours_verified = True
+                restaurant_db.update_restaurant(restaurant_id, {
+                    "is_open": structured_data.get("is_open"),
+                    "is_hours_verified": True,
+                    "operating_hours": {
+                        "time_open": structured_data.get("time_open"),
+                        "time_closed": structured_data.get("time_closed"),
+                        "is_open": structured_data.get("is_open")
+                    }
+                })
+            else:
+                print(f"❌ Failed to determine hours for restaurant: {restaurant_id}")
+                restaurant.is_closed = True
+                restaurant_db.update_restaurant(restaurant_id, {"is_hours_verified": False, "is_closed": True})
+            return {"successEvaluation": successEvaluation, "message": f"Got hours from VAPI. {structured_data}"}
+        except Exception as e:
+            logger.error(f"Error checking hours for restaurant {restaurant_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    async def call_dispatch_loop(self):
+        while True:
+            try:
+                logger.info("Starting dispatch loop...")
+                await self.dispatch_calls()
+            except Exception as e:
+                logger.error(f"Error in dispatch loop: {str(e)}")
+            await asyncio.sleep(RESTAURANT_CALL_DELAY) 
+
+    async def dispatch_calls(self):
+        logger.info("Dispatching calls...") 
+        try:
+            db = RestaurantDB()
+            restaurants = db.get_restaurants_without_hours()
+            
+            if not restaurants:
+                return
+                
+            vapi_client = VAPIClient()
+            for restaurant in restaurants:
+                try:
+                    logger.info(f"Getting hours for {restaurant['business_id']}")
+                    current_time = time.localtime()
+                    if current_time.tm_hour < 8:
+                        logger.info("It's before 8 AM. Skipping dispatch.")
+                        return
+                    await vapi_client.check_hours(restaurant["business_id"])
+                    logger.info(f"Got hours for {restaurant['business_id']}")
+                except Exception as e:
+                    logger.error(f"Failed to get hours for {restaurant['business_id']}: {str(e)}")
+                    continue
+                    
+        except Exception as e:
+            logger.error(f"Failed to dispatch calls: {str(e)}")
+

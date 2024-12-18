@@ -41,6 +41,7 @@ class Restaurant(BaseModel):
     categories: List[Category] = []
     is_closed: Optional[bool] = None
     is_open: bool = True
+    is_hours_verified: bool = False
     business_type: Optional[str] = None
 
     class Config:

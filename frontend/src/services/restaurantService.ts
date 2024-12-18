@@ -97,6 +97,7 @@ export function useRestaurantService() {
       if (params.location) searchParams.append('location', params.location);
       if (params.price) searchParams.append('price', convertPriceFilter(params.price) || '');
       if (params.categories) searchParams.append('categories', params.categories);
+      searchParams.append('limit', '20');
 
       const response = await apiClient.get<any>(
         `/restaurants/search?${searchParams.toString()}`,
@@ -105,17 +106,9 @@ export function useRestaurantService() {
       return response.map(transformRestaurant);
     },
 
-    async getRestaurantDetails(businessId: string): Promise<Restaurant> {
-      const response = await apiClient.get<any>(
-        `/restaurants/${businessId}`,
-        true
-      );
-      return transformRestaurant(response);
-    },
-
     async getCachedRestaurants(): Promise<Restaurant[]> {
       try {
-        const response = await fetch(`${API_BASE_URL}/restaurants`);
+        const response = await fetch(`${API_BASE_URL}/restaurants?limit=60`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }

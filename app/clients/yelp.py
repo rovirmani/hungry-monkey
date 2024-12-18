@@ -36,7 +36,7 @@ class YelpClient:
         try:
             # Build query parameters
             params = {
-                "term": term or "restaurants",
+                "term": "restaurants",
                 "location": location,
                 "limit": limit,
                 "sort_by": sort_by,
@@ -81,10 +81,10 @@ class YelpClient:
                                 longitude=business["coordinates"]["longitude"]
                             ),
                             photos=[business.get("image_url")] if business.get("image_url") else [],
-                            business_type="restaurants" if "grocery" not in [cat["alias"] for cat in business.get("categories", [])] else "grocery"
-                            ,
+                            business_type="restaurants" if "grocery" not in [cat["alias"] for cat in business.get("categories", [])] else "grocery",
                             categories=[Category(**cat) for cat in business.get("categories", [])],
-                            is_closed=business.get("is_closed", False)
+                            is_closed=business.get("is_closed", False),
+                            is_hours_verified=False
                         )
                         restaurants.append(restaurant)
                     except Exception as e:

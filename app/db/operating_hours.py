@@ -1,11 +1,15 @@
-from typing import Dict, Optional, Any, List
-from app.clients.supabase import SupabaseClient
+from typing import Any, Dict, List, Optional
+
+from supabase import create_client
+
+from ..utils.constants import SUPABASE_KEY, SUPABASE_URL
+
 
 class OperatingHoursDB:
     TABLE_NAME = 'operating_hours'
 
     def __init__(self):
-        self.supabase = SupabaseClient()
+        self.supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
     def get_hours(self, restaurant_id: str) -> Optional[Dict[str, Any]]:
         """Get operating hours for a restaurant."""
@@ -133,3 +137,4 @@ class OperatingHoursDB:
         except Exception as e:
             print(f"❌ Failed to get bulk operating hours: {str(e)}")
             return {}
+
