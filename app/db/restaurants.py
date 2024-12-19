@@ -22,7 +22,7 @@ class RestaurantDB:
         self.supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
         logger.info("✅ RestaurantDB initialized")
 
-    def get_restaurants(self, limit: Optional[int] = None) -> List[Dict]:
+    def get_all_restaurants(self, limit: Optional[int] = None) -> List[Dict]:
         """get stored restaurants from Supabase"""
         try:
             query = self.supabase.table(RESTAURANTS_TABLE_NAME).select("*")
@@ -47,7 +47,7 @@ class RestaurantDB:
             logger.error(f"❌ Failed to create restaurant: {str(e)}", exc_info=True)
             raise
 
-    async def get_restaurant(self, business_id: str) -> Optional[Restaurant]:
+    async def find_restaurant(self, business_id: str) -> Optional[Restaurant]:
         """Get a restaurant from the restaurant table."""
         try:
             response = self.supabase.table(RESTAURANTS_TABLE_NAME).select("*").eq('business_id', business_id).execute()
@@ -58,48 +58,28 @@ class RestaurantDB:
             logger.error(f"Failed to get restaurant {business_id}: {str(e)}", exc_info=True)
             raise
 
-    async def search_restaurants(self, params: SearchParams) -> List[Restaurant]:
-        """Search for restaurants using the Yelp API"""
+    async def search_restaurants(self, params: SearchParams, hours_filter: Optional[str] = None) -> List[Restaurant]:
+        """
+        Search the restaurant table with the given query filters.
+        Args:
+            params: Search parameters for filtering restaurants
+            hours_filter: Optional filter for hours verification status
+                        'verified' - only restaurants with verified hours
+                        'unverified' - only restaurants with unverified hours
+                        None - all restaurants
+        """
+        logger.info(f"🔍 Searching restaurants with term='{params.term}' location='{params.location}' categories={params.categories} hours_filter={hours_filter}")
         try:
-            self.yelp = YelpClient()
-            restaurants = await self.yelp.search_businesses(
-                term=params.term,
-                location=params.location,
-                price=params.price,
-                categories=params.categories,
-                limit=params.limit,
-                sort_by=params.sort_by
-            )
+            query = self._generate_search_query(params)
+            if hours_filter == 'verified':
+                query = query.eq('is_hours_verified', True)
+            elif hours_filter == 'unverified':
+                query = query.eq('is_hours_verified', False)
             
-            # Store all restaurants in cache
-            for restaurant in restaurants:
-                try:
-                    await self.upsert_restaurant(restaurant)
-                except Exception as store_error:
-                    logger.error(f"Failed to cache restaurant {restaurant.name}: {str(store_error)}")
-                    continue
-                
-            return restaurants
+            response = query.execute()
+            return [Restaurant(**r) for r in response.data]
         except Exception as e:
             logger.error(f"Failed to search restaurants: {str(e)}", exc_info=True)
-            raise
-
-    async def search_stored_restaurants(self, params: SearchParams) -> List[Restaurant]:
-        """Search for restaurants in our database cache"""
-        try:
-            restaurants = self.supabase.search_restaurants(
-                term=params.term,
-                location=params.location,
-                price=params.price,
-                categories=params.categories
-            )
-            
-            if not restaurants:
-                return []
-                
-            return [Restaurant(**r) for r in restaurants]
-        except Exception as e:
-            logger.error(f"Failed to search stored restaurants: {str(e)}", exc_info=True)
             raise
 
     async def update_restaurant(self, business_id: str, data: Dict[str, Any]) -> None:
@@ -109,49 +89,7 @@ class RestaurantDB:
         except Exception as e:
             logger.error(f"Failed to update restaurant {business_id}: {str(e)}", exc_info=True)
             raise
-
-    def get_cached_restaurants(self, limit: Optional[int] = None) -> List[Restaurant]:
-        """Get restaurants from the database cache."""
-        try:
-            stored = self.supabase.get_restaurants(limit)
-            return [Restaurant(**r) for r in stored]
-        except Exception as e:
-            logger.error(f"Failed to get cached restaurants: {str(e)}", exc_info=True)
-            raise
-
-    def get_stored_restaurants(self, limit: Optional[int] = None) -> List[Restaurant]:
-        """Get all restaurants from storage."""
-        try:
-            stored = self.supabase.get_restaurants(limit)
-            restaurants = []
-            
-            for data in stored:
-                try:
-                    # Format location data to match Restaurant model
-                    if 'location' in data:
-                        data['location'] = {
-                            'address1': data['location'].get('address1'),
-                            'address2': None,
-                            'address3': None,
-                            'city': data['location'].get('city'),
-                            'state': data['location'].get('state'),
-                            'zip_code': data['location'].get('zip_code'),
-                            'country': 'US',
-                            'display_address': None
-                        }
-                    restaurant = Restaurant(**data)
-                    restaurants.append(restaurant)
-                except Exception as e:
-                    logger.error(f"Error formatting restaurant {data.get('business_id')}: {str(e)}")
-                    continue
-            
-            if limit:
-                restaurants = restaurants[:limit]
-                
-            return restaurants
-        except Exception as e:
-            logger.error(f"Failed to get stored restaurants: {str(e)}", exc_info=True)
-            raise
+    
 
     def get_restaurants_without_hours(self) -> List[Dict[str, Any]]:
         """Returns: List of restaurant dicts for restaurants whose hours have not been verified."""
@@ -162,5 +100,25 @@ class RestaurantDB:
         except Exception as e:
             logger.error(f"Failed to get restaurants without hours: {str(e)}", exc_info=True)
             raise
+
+    def get_restaurants_with_hours(self) -> List[Dict[str, Any]]:
+        """Returns: List of restaurant dicts for restaurants whose hours have been verified."""
+        try:
+            query = self.supabase.table(RESTAURANTS_TABLE_NAME).select("*").eq('is_hours_verified', True).eq("is_closed", False).order('created_at')
+            response = query.execute()
+            return response.data
+        except Exception as e:
+            logger.error(f"Failed to get restaurants with hours: {str(e)}", exc_info=True)
+            raise
+
+    def _generate_search_query(self, params: SearchParams) -> str:
+        """Generate a search query based on the given parameters. Match by location and category."""
+        query = self.supabase.table(RESTAURANTS_TABLE_NAME).select("*")
+        logger.info(f"🔍  Search query: term='{params.term}', categories={params.categories}")
+        if params.location:
+            query = query.ilike("location->>city", f"%{params.location}%")
+        if params.categories and len(params.categories) > 0:
+            query = query.eq("business_type", params.categories[0])
+        return query
 
 restaurant_db = RestaurantDB()

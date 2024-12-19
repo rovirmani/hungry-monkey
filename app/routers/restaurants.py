@@ -32,10 +32,13 @@ async def get_stored_restaurants(
     Get cached restaurants. Authentication is optional - authenticated users get access to image fetching.
     Uses restaurantDB to fetch stored restaurants with their operating hours.
     """
+    logger.info("🔄 Fetching stored restaurants...")
     try:
-        fused_restaurants = await asyncio.to_thread(restaurant_db.get_restaurants_with_hours())
+        fused_restaurants = await asyncio.to_thread(restaurant_db.get_restaurants_with_hours)
         if not fused_restaurants:
             return []
+
+        logger.info(f"✅ Fetched {len(fused_restaurants)} restaurants")
         
         # Optionally fetch missing images
         if fetch_images:
@@ -79,7 +82,7 @@ async def search_restaurants(
     If user is authenticated and no results found, then search Yelp API.
     """
     try:
-        db = RestaurantDB()
+        db = restaurant_db
         params = SearchParams(
             term=term,
             location=location,
@@ -99,7 +102,7 @@ async def search_restaurants(
         logger.info(f"✅ User search permitted: {is_search_permitted}") 
         # Always search local cache first
         logger.info("🔄 Searching local cache...")
-        restaurants = await db.search_cached_restaurants(params)
+        restaurants = await db.search_restaurants(params)
         if restaurants:
             logger.info(f"✅ Found {len(restaurants)} restaurants in cache")
             print("The limit is ", limit)

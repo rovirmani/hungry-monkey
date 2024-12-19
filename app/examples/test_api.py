@@ -26,7 +26,7 @@ async def test_restaurant_api():
         if restaurants:
             # Test 2: Get Restaurant Details
             print(f"\n🔍 Test 2: Getting details for {restaurants[0].name}...")
-            restaurant_details = await db.get_restaurant(restaurants[0].business_id)
+            restaurant_details = await db.find_restaurant(restaurants[0].business_id)
             if restaurant_details:
                 print(f"Details retrieved successfully:")
                 print(f"Name: {restaurant_details.name}")

@@ -201,20 +201,19 @@ class VAPIClient:
         try:
             hours_db = OperatingHoursDB()
             restaurant_db = RestaurantDB()
-            print(f"🔍 Calling to check hours for restaurant: {restaurant_id}")
+            logger.info(f"🔍 Calling to check hours for restaurant: {restaurant_id}")
             # get phone number from restaurant id
-            restaurant = await restaurant_db.get_restaurant(restaurant_id)
+            restaurant = await restaurant_db.find_restaurant(restaurant_id)
             phone_number = restaurant.phone
 
             if ENABLE_CALLS:
-
                 call_id = await self.make_call(phone_number, "This is a call to check hours")
                 await self.wait_for_call_completion(call_id)
                 analysis = await self.get_call_analysis(call_id)
                 structured_data = analysis.get("structuredData", {})
                 successEvaluation = analysis.get("successEvaluation", False)
             else:
-                print(f"👨‍🍳 Skipping call to restaurant ${restaurant_id} because ENABLE_CALLS is False")
+                logger.info(f"👨‍🍳 Skipping call to restaurant ${restaurant_id} because ENABLE_CALLS is False")
                 structured_data = {
                     "time_open": "N/A",
                     "time_closed": "N/A",
@@ -224,7 +223,7 @@ class VAPIClient:
 
 
             if successEvaluation and structured_data and "time_open" in structured_data and "time_closed" in structured_data:
-                print(f"✅ Updating hours for restaurant: {restaurant_id}")
+                logger.info(f"✅ Updating hours for restaurant: {restaurant_id}")
                 hours_db.update_hours(restaurant_id, structured_data.get("time_open"), structured_data.get("time_closed"), structured_data.get("is_open"))
                 restaurant.is_open = structured_data.get("is_open")
                 restaurant.is_hours_verified = True
@@ -265,7 +264,7 @@ class VAPIClient:
                 return
                 
             vapi_client = VAPIClient()
-            for restaurant in restaurants:
+            for restaurant in restaurants[:5]:
                 try:
                     logger.info(f"Getting hours for {restaurant['business_id']}")
                     current_time = time.localtime()
