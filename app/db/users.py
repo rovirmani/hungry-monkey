@@ -34,7 +34,7 @@ class UserDB:
             if "search_credits" not in user_data:
                 user_data["search_credits"] = 3
             
-            response =  self.supabase.client.table(self.TABLE_NAME).upsert(user_data).execute()
+            response =  self.supabase.table(self.TABLE_NAME).upsert(user_data).execute()
             logger.info(f"✅ User created/updated successfully: {user_data['user_id']}")
             return True
         except Exception as e:
@@ -43,7 +43,7 @@ class UserDB:
 
     async def get_user(self, user_id: str) -> Optional[User]:
         try:
-            response = self.supabase.client.table(self.TABLE_NAME).select("*").eq('user_id', user_id).execute()
+            response = self.supabase.table(self.TABLE_NAME).select("*").eq('user_id', user_id).execute()
             if response.data and len(response.data) > 0:
                 return User(**response.data[0])
             return None
@@ -67,7 +67,7 @@ class UserDB:
                 
             if user.search_credits > 0:
                 logger.info(f"✅ User {user_id} has {user.search_credits} search credits")
-                self.supabase.client.table(self.TABLE_NAME).update({
+                self.supabase.table(self.TABLE_NAME).update({
                     'search_credits': user.search_credits - 1,
                     'updated_at': 'now()'
                 }).eq('user_id', user_id).execute()

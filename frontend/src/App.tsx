@@ -33,7 +33,7 @@ function App() {
       try {
         setLoading(true);
         setError(null);
-        const data = await restaurantService.getCachedRestaurants();
+        const data = await restaurantService.getCachedRestaurants(category);
         setRestaurants(data);
       } catch (err) {
         // Don't set error for empty results
@@ -44,7 +44,7 @@ function App() {
     };
 
     loadCachedRestaurants();
-  }, []);
+  }, [category]); // Only run once on mount
 
   useEffect(() => {
     const initializeUser = async () => {

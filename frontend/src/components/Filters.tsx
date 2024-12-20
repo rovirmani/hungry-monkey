@@ -57,7 +57,9 @@ export function Filters({
                 Restaurants
               </button>
               <button
-                onClick={() => setCategory('grocery')}
+                onClick={() => {
+                  setCategory('grocery');
+                }}
                 className={clsx(
                   'px-3 py-1 rounded-full text-sm font-medium transition-colors',
                   category === 'grocery'

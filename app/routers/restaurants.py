@@ -24,6 +24,7 @@ user_db = UserDB()
 
 @router.get("/", response_model=List[RestaurantWithHours])
 async def get_stored_restaurants(
+    categories: Optional[List[str]] = Query(None, description="List of categories to filter by"),
     limit: Optional[int] = Query(None, description="Maximum number of restaurants to return"),
     fetch_images: Optional[bool] = Query(False, description="Whether to fetch missing images"),
     user: Optional[dict] = optional_auth
@@ -34,7 +35,10 @@ async def get_stored_restaurants(
     """
     logger.info("🔄 Fetching stored restaurants...")
     try:
-        fused_restaurants = await asyncio.to_thread(restaurant_db.get_restaurants_with_hours)
+        ## instead of only showing hours we will show all restaurants for demo purposes
+        # fused_restaurants = await asyncio.to_thread(restaurant_db.get_restaurants_with_hours)
+        fused_restaurants = await asyncio.to_thread(restaurant_db.get_all_restaurants, categories, limit=limit)
+
         if not fused_restaurants:
             return []
 

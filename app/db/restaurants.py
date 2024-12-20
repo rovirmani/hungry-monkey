@@ -22,10 +22,12 @@ class RestaurantDB:
         self.supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
         logger.info("✅ RestaurantDB initialized")
 
-    def get_all_restaurants(self, limit: Optional[int] = None) -> List[Dict]:
+    def get_all_restaurants(self, categories: Optional[List[str]] = None, limit: Optional[int] = None) -> List[Dict]:
         """get stored restaurants from Supabase"""
         try:
             query = self.supabase.table(RESTAURANTS_TABLE_NAME).select("*")
+            if categories:
+                query = query.in_("business_type", categories)
             if limit:
                 query = query.limit(limit)
             response = query.execute()
