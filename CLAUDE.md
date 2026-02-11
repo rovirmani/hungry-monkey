@@ -56,30 +56,32 @@ hungry-monkey/
 
 ## Development Commands
 
+### Full-Stack (both services)
 ```bash
-# Run both frontend and backend together
-npm run dev
-
-# Frontend only
-npm run dev:frontend         # Vite dev server (http://localhost:5173)
-
-# Backend only
-npm run dev:backend          # FastAPI uvicorn (http://localhost:8000)
-
-# Frontend build
-cd frontend && npm run build
-
-# Frontend lint
-cd frontend && npm run lint
-
-# Backend setup
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# Run backend directly
-uvicorn app.main:app --reload --port 8000
+npm run dev                  # Run both frontend and backend concurrently
 ```
+
+### Frontend
+```bash
+npm run dev:frontend         # Vite dev server (http://localhost:5173)
+cd frontend && npm run build
+cd frontend && npm run lint
+```
+
+### Backend (uv)
+```bash
+uv sync                          # Install/sync Python dependencies
+uv run uvicorn app.main:app --reload --port 8000
+uv add <package>                  # Add new dependency
+```
+
+### Code Quality (ruff)
+```bash
+uv run ruff format .
+uv run ruff check .
+uv run ruff check --fix .
+```
+
 
 ## Environment & Config
 
