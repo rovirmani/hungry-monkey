@@ -1,6 +1,5 @@
 from fastapi import FastAPI, BackgroundTasks, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from mangum import Mangum
 import asyncio
 import logging
 import os
@@ -40,8 +39,6 @@ async def log_requests(request: Request, call_next):
 origins = [
     "http://localhost:5173",  # React dev server
     "http://localhost:8000",  # Local development server
-    "https://hungry-monkey-nine.vercel.app",  # Vercel production
-    "http://hungry-monkey-nine.vercel.app"  # Alternate Vercel domain
 ]
 
 app.add_middleware(
@@ -97,11 +94,6 @@ async def startup_event():
     background_tasks = BackgroundTasks()
     background_tasks.add_task(call_dispatch_loop)
 
-# Create a handler for Vercel serverless deployment
-# Note: We need to use mangum to wrap our FastAPI app
-handler = Mangum(app, lifespan="off")
-
-# For local development
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
